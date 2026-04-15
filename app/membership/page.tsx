@@ -1,4 +1,3 @@
-import { Navbar } from "@/components/navbar";
 import { MembershipHero } from "@/components/membership/membership-hero";
 import { PricingSection } from "@/components/pricing-section";
 import { FaqSection } from "@/components/membership/faq-section";
@@ -12,7 +11,7 @@ export default function MembershipPage() {
     <main className="min-h-screen relative">
       {/* Fixed Background */}
       <div
-        className="fixed inset-0 z-0"
+        className="fixed inset-0 z-0 pointer-events-none"
         style={{
           backgroundImage: `url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image%2071-U3psbOA2NUHDgaxxj2pfj82aOWxjKN.png')`,
           backgroundSize: "cover",
@@ -23,14 +22,15 @@ export default function MembershipPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        <Navbar />
-        <MembershipHero />
-        <PricingSection />
-        <FaqSection />
-        <TestimonialsSection />
-        <CTASection />
-        <NewsletterSection />
-        <Footer />
+        <div className="pt-16">
+          <MembershipHero />
+          <PricingSection />
+          <FaqSection />
+          <TestimonialsSection />
+          <CTASection />
+          <NewsletterSection />
+          <Footer />
+        </div>
       </div>
     </main>
   );

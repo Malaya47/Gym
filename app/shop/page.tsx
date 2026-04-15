@@ -1,4 +1,3 @@
-import { Navbar } from "@/components/navbar";
 import { ShopHero } from "@/components/shop/shop-hero";
 import { ShopProductsSection } from "@/components/shop/shop-products-section";
 import { Footer } from "@/components/footer";
@@ -8,7 +7,7 @@ export default function ShopPage() {
     <main className="min-h-screen relative">
       {/* Fixed Background */}
       <div
-        className="fixed inset-0 z-0"
+        className="fixed inset-0 z-0 pointer-events-none"
         style={{
           backgroundImage: `url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image%2071-U3psbOA2NUHDgaxxj2pfj82aOWxjKN.png')`,
           backgroundSize: "cover",
@@ -19,10 +18,11 @@ export default function ShopPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        <Navbar />
-        <ShopHero />
-        <ShopProductsSection />
-        <Footer />
+        <div className="pt-16">
+          <ShopHero />
+          <ShopProductsSection />
+          <Footer />
+        </div>
       </div>
     </main>
   );
