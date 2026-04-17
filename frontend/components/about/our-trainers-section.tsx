@@ -1,33 +1,26 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { getTrainers, getSiteText, getImageUrl } from "@/lib/content";
 
-export function OurTrainersSection() {
-  const trainers = [
-    {
-      name: "Lorem ipsum",
-      description:
-        "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet",
-      image: "/trainer-image.png",
-    },
-    {
-      name: "Lorem ipsum",
-      description:
-        "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet",
-      image: "/trainer-image.png",
-    },
-    {
-      name: "Lorem ipsum",
-      description:
-        "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet",
-      image: "/trainer-image.png",
-    },
-    {
-      name: "Lorem ipsum",
-      description:
-        "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet",
-      image: "/trainer-image.png",
-    },
-  ];
+export async function OurTrainersSection() {
+  const [allTrainers, text] = await Promise.all([
+    getTrainers(),
+    getSiteText("about"),
+  ]);
+
+  // Use trainers with description (about-page trainers) — fallback to first 4
+  const withDesc = allTrainers.filter((t) => t.description);
+  const trainers =
+    withDesc.length >= 4
+      ? withDesc.slice(0, 4)
+      : allTrainers.slice(0, 4).map((t) => ({
+          ...t,
+          description:
+            t.description ??
+            "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
+        }));
+
+  const ph = "/trainer-image.png";
 
   return (
     <section className="py-20 bg-transparent">
@@ -35,93 +28,95 @@ export function OurTrainersSection() {
         {/* Heading */}
         <div className="text-center mb-14">
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight">
-            OUR TRAINERS
+            {text.about_trainers_title || "OUR TRAINERS"}
           </h2>
           <p className="text-white/60 max-w-2xl mx-auto text-sm">
-            At This Part You Can Easily Access All Of Our Servises. Take A Look
-            At Them And Chose Wich Ever You Want.
+            {text.about_trainers_subtitle ||
+              "At This Part You Can Easily Access All Of Our Servises. Take A Look At Them And Chose Wich Ever You Want."}
           </p>
         </div>
 
-        {/* Row 1: text | image | text | image */}
-        <div className="grid grid-cols-4 gap-6 mb-6">
-          {/* Trainer 1 — text */}
-          <div className="flex flex-col justify-center">
-            <h3 className="text-white text-xl font-semibold mb-3">
-              {trainers[0].name}
-            </h3>
-            <p className="text-white/60 text-sm leading-relaxed">
-              {trainers[0].description}
-            </p>
-          </div>
-          {/* Trainer 1 — image */}
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-            <Image
-              src={trainers[0].image}
-              alt={trainers[0].name}
-              fill
-              className="object-cover object-top"
-            />
-          </div>
-          {/* Trainer 2 — text */}
-          <div className="flex flex-col justify-center">
-            <h3 className="text-white text-xl font-semibold mb-3">
-              {trainers[1].name}
-            </h3>
-            <p className="text-white/60 text-sm leading-relaxed">
-              {trainers[1].description}
-            </p>
-          </div>
-          {/* Trainer 2 — image */}
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-            <Image
-              src={trainers[1].image}
-              alt={trainers[1].name}
-              fill
-              className="object-cover object-top"
-            />
-          </div>
-        </div>
+        {trainers.length >= 2 && (
+          <>
+            {/* Row 1: text | image | text | image */}
+            <div className="grid grid-cols-4 gap-6 mb-6">
+              <div className="flex flex-col justify-center">
+                <h3 className="text-white text-xl font-semibold mb-3">
+                  {trainers[0].name}
+                </h3>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  {trainers[0].description}
+                </p>
+              </div>
+              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                <Image
+                  src={getImageUrl(trainers[0].image) || ph}
+                  alt={trainers[0].name}
+                  fill
+                  className="object-cover object-top"
+                />
+              </div>
+              {trainers[1] && (
+                <>
+                  <div className="flex flex-col justify-center">
+                    <h3 className="text-white text-xl font-semibold mb-3">
+                      {trainers[1].name}
+                    </h3>
+                    <p className="text-white/60 text-sm leading-relaxed">
+                      {trainers[1].description}
+                    </p>
+                  </div>
+                  <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                    <Image
+                      src={getImageUrl(trainers[1].image) || ph}
+                      alt={trainers[1].name}
+                      fill
+                      className="object-cover object-top"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
 
-        {/* Row 2: image | text | image | text */}
-        <div className="grid grid-cols-4 gap-6">
-          {/* Trainer 3 — image */}
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-            <Image
-              src={trainers[2].image}
-              alt={trainers[2].name}
-              fill
-              className="object-cover object-top"
-            />
-          </div>
-          {/* Trainer 3 — text */}
-          <div className="flex flex-col justify-center">
-            <h3 className="text-white text-xl font-semibold mb-3">
-              {trainers[2].name}
-            </h3>
-            <p className="text-white/60 text-sm leading-relaxed">
-              {trainers[2].description}
-            </p>
-          </div>
-          {/* Trainer 4 — image */}
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-            <Image
-              src={trainers[3].image}
-              alt={trainers[3].name}
-              fill
-              className="object-cover object-top"
-            />
-          </div>
-          {/* Trainer 4 — text */}
-          <div className="flex flex-col justify-center">
-            <h3 className="text-white text-xl font-semibold mb-3">
-              {trainers[3].name}
-            </h3>
-            <p className="text-white/60 text-sm leading-relaxed">
-              {trainers[3].description}
-            </p>
-          </div>
-        </div>
+            {/* Row 2: image | text | image | text */}
+            {trainers.length >= 4 && (
+              <div className="grid grid-cols-4 gap-6">
+                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                  <Image
+                    src={getImageUrl(trainers[2].image) || ph}
+                    alt={trainers[2].name}
+                    fill
+                    className="object-cover object-top"
+                  />
+                </div>
+                <div className="flex flex-col justify-center">
+                  <h3 className="text-white text-xl font-semibold mb-3">
+                    {trainers[2].name}
+                  </h3>
+                  <p className="text-white/60 text-sm leading-relaxed">
+                    {trainers[2].description}
+                  </p>
+                </div>
+                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                  <Image
+                    src={getImageUrl(trainers[3].image) || ph}
+                    alt={trainers[3].name}
+                    fill
+                    className="object-cover object-top"
+                  />
+                </div>
+                <div className="flex flex-col justify-center">
+                  <h3 className="text-white text-xl font-semibold mb-3">
+                    {trainers[3].name}
+                  </h3>
+                  <p className="text-white/60 text-sm leading-relaxed">
+                    {trainers[3].description}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Show more button */}
         <div className="flex justify-center mt-12">
@@ -130,7 +125,7 @@ export function OurTrainersSection() {
           </Button>
         </div>
 
-        {/* Seperation line  */}
+        {/* Separation line  */}
         <div
           className="w-full flex justify-center items-center relative"
           style={{ height: "40px" }}

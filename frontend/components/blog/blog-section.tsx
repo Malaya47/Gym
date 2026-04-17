@@ -1,29 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { BlogPost, SiteText, getImageUrl } from "@/lib/content";
 
-const blogImages = [
-  "/training-zone-1.png",
-  "/training-zone-2.png",
-  "/training-zone-3.png",
-  "/training-zone-4.png",
-  "/equipment-1.png",
-  "/equipment-2.png",
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+const DEFAULT_POSTS: BlogPost[] = [
+  {
+    id: 1,
+    title: "Lorem ipsum",
+    excerpt: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    image: "/training-zone-1.png",
+    isActive: true,
+  },
+  {
+    id: 2,
+    title: "Lorem ipsum",
+    excerpt: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    image: "/training-zone-2.png",
+    isActive: true,
+  },
+  {
+    id: 3,
+    title: "Lorem ipsum",
+    excerpt: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    image: "/training-zone-3.png",
+    isActive: true,
+  },
+  {
+    id: 4,
+    title: "Lorem ipsum",
+    excerpt: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    image: "/training-zone-4.png",
+    isActive: true,
+  },
+  {
+    id: 5,
+    title: "Lorem ipsum",
+    excerpt: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    image: "/equipment-1.png",
+    isActive: true,
+  },
+  {
+    id: 6,
+    title: "Lorem ipsum",
+    excerpt: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    image: "/equipment-2.png",
+    isActive: true,
+  },
 ];
-
-const posts = blogImages.map((img, i) => ({
-  id: i + 1,
-  image: img,
-  title: "Lorem ipsum",
-  excerpt:
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-}));
 
 export function BlogSection() {
   const [query, setQuery] = useState("");
+  const [posts, setPosts] = useState<BlogPost[]>(DEFAULT_POSTS);
+  const [text, setText] = useState<SiteText>({});
+
+  useEffect(() => {
+    fetch(`${API}/content/blog`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && data.length && setPosts(data))
+      .catch(() => {});
+    fetch(`${API}/content/text/blog`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setText(data))
+      .catch(() => {});
+  }, []);
 
   const filtered = posts.filter(
     (p) =>
@@ -37,11 +81,11 @@ export function BlogSection() {
         {/* Heading */}
         <div className="text-center mb-6">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-wide mb-4">
-            BLOG
+            {text.blog_section_title || "BLOG"}
           </h1>
           <p className="text-white/60 text-sm sm:text-base max-w-xl mx-auto">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum
-            dolor sit amet, consectetur adipiscing elit.
+            {text.blog_section_subtitle ||
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit."}
           </p>
         </div>
 
@@ -69,7 +113,7 @@ export function BlogSection() {
               {/* Image */}
               <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-4">
                 <Image
-                  src={post.image}
+                  src={getImageUrl(post.image) || "/training-zone-1.png"}
                   alt={post.title}
                   fill
                   className="object-cover"

@@ -1,23 +1,47 @@
 import Image from "next/image";
+import { getTrainingZones, getSiteText, getImageUrl } from "@/lib/content";
 
-export function TrainingZonesSection() {
-  // Images in the order to match the screenshot
-  const zones = [
-    { image: "/training-zone-1.png", alt: "Cable training" },
-    { image: "/training-zone-2.png", alt: "Step aerobics" },
-    { image: "/training-zone-3.png", alt: "Cycling" },
-    { image: "/training-zone-4.png", alt: "Running track" },
-  ];
+export async function TrainingZonesSection() {
+  const [zones, text] = await Promise.all([
+    getTrainingZones(),
+    getSiteText("about"),
+  ]);
+
+  const display =
+    zones.length >= 4
+      ? zones.slice(0, 4)
+      : [
+          {
+            id: 0,
+            image: "/training-zone-1.png",
+            alt: "Cable training",
+            order: 0,
+          },
+          {
+            id: 1,
+            image: "/training-zone-2.png",
+            alt: "Step aerobics",
+            order: 1,
+          },
+          { id: 2, image: "/training-zone-3.png", alt: "Cycling", order: 2 },
+          {
+            id: 3,
+            image: "/training-zone-4.png",
+            alt: "Running track",
+            order: 3,
+          },
+        ];
 
   return (
     <section className="py-20 bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 tracking-tight">
-            TRAINING ZONES
+            {text.training_zones_title || "TRAINING ZONES"}
           </h2>
           <p className="text-white/70 text-base">
-            Everything You Need For Serious Training Comfort And Result
+            {text.training_zones_subtitle ||
+              "Everything You Need For Serious Training Comfort And Result"}
           </p>
         </div>
 
@@ -35,8 +59,8 @@ export function TrainingZonesSection() {
             style={{ gridColumn: "1", gridRow: "1 / 3" }}
           >
             <Image
-              src={zones[0].image}
-              alt={zones[0].alt}
+              src={getImageUrl(display[0].image) || "/training-zone-1.png"}
+              alt={display[0].alt}
               fill
               className="object-cover object-top"
             />
@@ -48,8 +72,8 @@ export function TrainingZonesSection() {
             style={{ gridColumn: "2", gridRow: "1" }}
           >
             <Image
-              src={zones[1].image}
-              alt={zones[1].alt}
+              src={getImageUrl(display[1]?.image) || "/training-zone-2.png"}
+              alt={display[1]?.alt ?? ""}
               fill
               className="object-cover object-center"
             />
@@ -61,8 +85,8 @@ export function TrainingZonesSection() {
             style={{ gridColumn: "3", gridRow: "1" }}
           >
             <Image
-              src={zones[2].image}
-              alt={zones[2].alt}
+              src={getImageUrl(display[2]?.image) || "/training-zone-3.png"}
+              alt={display[2]?.alt ?? ""}
               fill
               className="object-cover object-center"
             />
@@ -74,8 +98,8 @@ export function TrainingZonesSection() {
             style={{ gridColumn: "2 / 4", gridRow: "2" }}
           >
             <Image
-              src={zones[3].image}
-              alt={zones[3].alt}
+              src={getImageUrl(display[3]?.image) || "/training-zone-4.png"}
+              alt={display[3]?.alt ?? ""}
               fill
               className="object-cover object-center"
             />

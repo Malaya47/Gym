@@ -1,51 +1,37 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { getTrainers, getSiteText, getImageUrl } from "@/lib/content";
 
-export function TrainersSection() {
-  const trainers = [
-    {
-      name: "Sam Cole",
-      role: "Personal Trainer",
-      image: "/trainer-preview.png",
-    },
-    {
-      name: "Sam Cole",
-      role: "Personal Trainer",
-      image: "/trainer-preview.png",
-    },
-    {
-      name: "Sam Cole",
-      role: "Personal Trainer",
-      image: "/trainer-preview.png",
-    },
-    {
-      name: "Sam Cole",
-      role: "Personal Trainer",
-      image: "/trainer-preview.png",
-    },
-  ];
+export async function TrainersSection() {
+  const [trainers, text] = await Promise.all([
+    getTrainers(),
+    getSiteText("trainers"),
+  ]);
+
+  // Show only the first 4 by order (home preview)
+  const preview = trainers.slice(0, 4);
 
   return (
     <section className="py-20 bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-4">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            TRAINERS PREVIEW
+            {text.trainers_section_title || "TRAINERS PREVIEW"}
           </h2>
           <p className="text-white/60 text-sm max-w-2xl mx-auto">
-            At This Part You Can Easily Access All Of Our Services. Take A Look
-            At Them And Chose Wish Ever You Want.
+            {text.trainers_section_subtitle ||
+              "At This Part You Can Easily Access All Of Our Services. Take A Look At Them And Chose Wish Ever You Want."}
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
-          {trainers.map((trainer, index) => (
+          {preview.map((trainer, index) => (
             <div
-              key={index}
+              key={trainer.id}
               className="group relative rounded-xl overflow-hidden bg-[#1a0a12]/80 aspect-[3/4] backdrop-blur-sm"
             >
               <Image
-                src={trainer.image}
+                src={getImageUrl(trainer.image) || "/trainer-preview.png"}
                 alt={trainer.name}
                 fill
                 style={{ objectFit: "cover" }}
@@ -71,7 +57,7 @@ export function TrainersSection() {
             Show more
           </Button>
         </div>
-        {/* Seperation line  */}
+        {/* Separation line  */}
         <div
           className="w-full flex justify-center items-center relative"
           style={{ height: "40px" }}
@@ -107,8 +93,6 @@ export function TrainersSection() {
           />
         </div>
       </div>
-
-      
     </section>
   );
 }

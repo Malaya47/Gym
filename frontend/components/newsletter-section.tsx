@@ -1,10 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { SiteText } from "@/lib/content";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 export function NewsletterSection() {
   const [email, setEmail] = useState("");
+  const [text, setText] = useState<SiteText>({});
+
+  useEffect(() => {
+    fetch(`${API}/content/text/newsletter`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setText(data))
+      .catch(() => {});
+  }, []);
 
   return (
     <section className="py-16 bg-transparent">
@@ -26,10 +37,11 @@ export function NewsletterSection() {
           <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8">
             <div className="flex-1 min-w-[220px]">
               <h3 className="text-4xl font-extrabold text-white mb-2 text-left">
-                JOIN OUR NEWSLETTER
+                {text.newsletter_title || "JOIN OUR NEWSLETTER"}
               </h3>
               <p className="text-white/60 text-base mb-0 text-left">
-                Keep up to date with everything Reflect
+                {text.newsletter_subtitle ||
+                  "Keep up to date with everything Reflect"}
               </p>
             </div>
             <form className="flex w-full md:w-auto flex-row items-center gap-2 md:gap-4 justify-end">

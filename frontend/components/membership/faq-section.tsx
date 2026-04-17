@@ -1,38 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
-const faqs = [
-  {
-    question: "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. ?",
-    answer:
-      "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-  },
-  {
-    question: "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-    answer:
-      "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-  },
-  {
-    question: "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-    answer:
-      "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-  },
-  {
-    question: "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-    answer:
-      "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-  },
-  {
-    question: "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-    answer:
-      "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.",
-  },
-];
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+type FaqItem = { id: number; question: string; answer: string; order: number };
 
 export function FaqSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/content/faqs`)
+      .then((r) => r.json())
+      .then((data: FaqItem[]) => {
+        setFaqs(data);
+        if (data.length > 0) setOpenIndex(data[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (faqs.length === 0) return null;
 
   return (
     <section className="py-20 bg-transparent">
@@ -42,11 +31,11 @@ export function FaqSection() {
         </h2>
 
         <div className="flex flex-col gap-4">
-          {faqs.map((faq, index) => {
-            const isOpen = openIndex === index;
+          {faqs.map((faq) => {
+            const isOpen = openIndex === faq.id;
             return (
               <div
-                key={index}
+                key={faq.id}
                 className="rounded-xl border overflow-hidden"
                 style={{
                   borderColor: isOpen ? "#7C3AED" : "rgba(255,255,255,0.12)",
@@ -56,7 +45,7 @@ export function FaqSection() {
                 <button
                   className="w-full flex items-center justify-between px-6 py-5 text-left"
                   style={{ background: "#0a0a0a" }}
-                  onClick={() => setOpenIndex(isOpen ? null : index)}
+                  onClick={() => setOpenIndex(isOpen ? null : faq.id)}
                 >
                   <span className="text-white font-medium text-base sm:text-lg">
                     {faq.question}

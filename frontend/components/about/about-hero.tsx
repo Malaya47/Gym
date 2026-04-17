@@ -1,12 +1,17 @@
 import Image from "next/image";
+import { getSiteText, getImageUrl } from "@/lib/content";
 
-export function AboutHero() {
+export async function AboutHero() {
+  const text = await getSiteText("about");
+
+  const bgImage = getImageUrl(text.about_hero_image) || "/about-hero-image.png";
+
   return (
     <section className="relative min-h-[100vh] flex items-center justify-center">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/about-hero-image.png"
+          src={bgImage}
           alt="Fitness background"
           fill
           className="object-cover object-top opacity-60"
@@ -18,18 +23,11 @@ export function AboutHero() {
 
       <div className="relative z-10 w-full flex flex-col items-center justify-center text-center px-4">
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-8 tracking-wide">
-          WHO WE ARE
+          {text.about_hero_title || "WHO WE ARE"}
         </h1>
         <p className="text-white/80 text-base sm:text-lg md:text-xl max-w-5xl mx-auto">
-          Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum
-          Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit
-          Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet,
-          Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet, Consectetur
-          Adipiscing Elit. Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing
-          Elit.Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit.Lorem
-          Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit. Lorem Ipsum Dolor
-          Sit Amet, Consectetur Adipiscing Elit.Lorem Ipsum Dolor Sit Amet,
-          Consectetur Adipiscing Elit.
+          {text.about_hero_text ||
+            "Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit."}
         </p>
       </div>
     </section>
