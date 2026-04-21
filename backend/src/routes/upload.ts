@@ -1,25 +1,26 @@
 import { Router, Response } from "express";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { requireAdmin, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// Multer storage config
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const name = `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
-    cb(null, name);
-  },
+// Multer + Cloudinary storage config
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "gym-uploads",
+    allowed_formats: ["jpg", "jpeg", "png", "webp", "gif", "svg"],
+    resource_type: "image",
+  } as object,
 });
 
 // Allow only image files
@@ -52,8 +53,10 @@ router.post(
       res.status(400).json({ error: "No image file provided" });
       return;
     }
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
+    // Cloudinary returns the full URL in req.file.path
+    res.json({
+      url: (req.file as Express.Multer.File & { path: string }).path,
+    });
   },
 );
 

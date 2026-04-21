@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
 
 import authRoutes from "./routes/auth";
 import membershipRoutes from "./routes/membership";
@@ -24,9 +23,6 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ─── Static Uploads ────────────────────────────────────
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // ─── Health Check ───────────────────────────────────────
 app.get("/api/health", (_req, res) => {
@@ -59,8 +55,11 @@ app.use(
   },
 );
 
-app.listen(PORT, () => {
-  console.log(`🚀 GYM API running on http://localhost:${PORT}`);
-});
+// Only start the HTTP server in non-serverless environments
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`🚀 GYM API running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;
