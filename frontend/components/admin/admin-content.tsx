@@ -17,6 +17,7 @@ import {
   X,
   Check,
   AlertTriangle,
+  RotateCcw,
   Bold,
   Italic,
   Underline,
@@ -83,6 +84,20 @@ function img(src?: string | null) {
   if (src.startsWith("http")) return src;
   if (src.startsWith("/uploads/")) return `${UPLOADS_BASE}${src}`;
   return src;
+}
+
+const IMAGE_DEFAULTS: Record<string, string> = {
+  hero_image:
+    "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/anastase-maragos-ehQimz6-1qM-unsplash%201-GdqLOCVXElCrEmbSonGZfnAdIqozNH.png",
+  why_choose_video_image: "/why-choose-us.png",
+  about_hero_image: "/about-hero-image.png",
+  events_hero_image: "/event-hero-image.jpg",
+};
+
+function isImageKey(key: string) {
+  return (
+    key.toLowerCase().includes("image") || key.toLowerCase().includes("_img")
+  );
 }
 
 // ── tiny reusable pieces ───────────────────────────────────────────────────
@@ -476,42 +491,94 @@ function TextContentPanel() {
                   <Label className="text-white/50 text-xs font-mono">
                     {row.key}
                   </Label>
-                  <div className="flex gap-2 items-start">
-                    {row.value.length > 80 ? (
-                      <Textarea
-                        value={editing[row.id] ?? row.value}
-                        onChange={(e) =>
-                          setEditing((prev) => ({
-                            ...prev,
-                            [row.id]: e.target.value,
-                          }))
+                  {isImageKey(row.key) ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2 items-center">
+                        <ImageInput
+                          value={editing[row.id] ?? row.value}
+                          onChange={(url) =>
+                            setEditing((prev) => ({ ...prev, [row.id]: url }))
+                          }
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => save(row)}
+                          className={
+                            saved[row.id]
+                              ? "bg-green-700 text-white"
+                              : "bg-red-700 hover:bg-red-600 text-white"
+                          }
+                        >
+                          {saved[row.id] ? <Check size={14} /> : "Save"}
+                        </Button>
+                      </div>
+                      {(editing[row.id] ?? row.value) && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 h-14 rounded overflow-hidden bg-white/5 shrink-0 border border-white/10">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={img(editing[row.id] ?? row.value)}
+                              alt="preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          {IMAGE_DEFAULTS[row.key] && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditing((prev) => ({
+                                  ...prev,
+                                  [row.id]: IMAGE_DEFAULTS[row.key],
+                                }))
+                              }
+                              className="flex items-center gap-1 text-xs text-white/40 hover:text-white/80 transition"
+                              title="Reset to original default image"
+                            >
+                              <RotateCcw size={12} />
+                              Reset to default
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 items-start">
+                      {row.value.length > 80 ? (
+                        <Textarea
+                          value={editing[row.id] ?? row.value}
+                          onChange={(e) =>
+                            setEditing((prev) => ({
+                              ...prev,
+                              [row.id]: e.target.value,
+                            }))
+                          }
+                          className="bg-[#1a1a1a] border-white/10 text-white text-sm flex-1 min-h-[70px]"
+                        />
+                      ) : (
+                        <Input
+                          value={editing[row.id] ?? row.value}
+                          onChange={(e) =>
+                            setEditing((prev) => ({
+                              ...prev,
+                              [row.id]: e.target.value,
+                            }))
+                          }
+                          className="bg-[#1a1a1a] border-white/10 text-white text-sm flex-1"
+                        />
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => save(row)}
+                        className={
+                          saved[row.id]
+                            ? "bg-green-700 text-white"
+                            : "bg-red-700 hover:bg-red-600 text-white"
                         }
-                        className="bg-[#1a1a1a] border-white/10 text-white text-sm flex-1 min-h-[70px]"
-                      />
-                    ) : (
-                      <Input
-                        value={editing[row.id] ?? row.value}
-                        onChange={(e) =>
-                          setEditing((prev) => ({
-                            ...prev,
-                            [row.id]: e.target.value,
-                          }))
-                        }
-                        className="bg-[#1a1a1a] border-white/10 text-white text-sm flex-1"
-                      />
-                    )}
-                    <Button
-                      size="sm"
-                      onClick={() => save(row)}
-                      className={
-                        saved[row.id]
-                          ? "bg-green-700 text-white"
-                          : "bg-red-700 hover:bg-red-600 text-white"
-                      }
-                    >
-                      {saved[row.id] ? <Check size={14} /> : "Save"}
-                    </Button>
-                  </div>
+                      >
+                        {saved[row.id] ? <Check size={14} /> : "Save"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
           </div>
@@ -1160,6 +1227,171 @@ function MembershipPlansPanel() {
   );
 }
 
+// ── FOOTER PANEL ──────────────────────────────────────────────────────────
+
+const FOOTER_DEFAULTS = {
+  footer_description:
+    "Lorem ipsum dolor sit amet consectetur. Ut a mattis augue primum planum est absque. In lorem suspendisse et blandit est ante laboribus. Vel mauris amet mi sit et amet.",
+  footer_facebook_url: "#",
+  footer_instagram_url: "#",
+  footer_menu_1_label: "Home",
+  footer_menu_1_url: "/",
+  footer_menu_2_label: "About",
+  footer_menu_2_url: "/about",
+  footer_menu_3_label: "Membership",
+  footer_menu_3_url: "/membership",
+  footer_menu_4_label: "Shop",
+  footer_menu_4_url: "/shop",
+  footer_address: "Lorem Ipsum St, 25/99034,",
+  footer_phone: "+990 000 0000",
+  footer_email: "info@fitness.com",
+  footer_copyright: "© 2026 Fitness. All rights reserved.",
+};
+
+type FooterData = typeof FOOTER_DEFAULTS;
+
+function FooterPanel() {
+  const [form, setForm] = useState<FooterData>({ ...FOOTER_DEFAULTS });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    apiFetch("/admin/content/text")
+      .then((rows: { key: string; value: string }[]) => {
+        const map: Record<string, string> = {};
+        rows.forEach((r) => (map[r.key] = r.value));
+        setForm((prev) => {
+          const merged = { ...prev };
+          (Object.keys(prev) as (keyof FooterData)[]).forEach((k) => {
+            if (map[k] !== undefined) merged[k] = map[k];
+          });
+          return merged;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  async function saveAll() {
+    setSaving(true);
+    try {
+      await apiFetch("/admin/content/text", {
+        method: "PUT",
+        body: JSON.stringify({
+          updates: (Object.keys(form) as (keyof FooterData)[]).map((k) => ({
+            key: k,
+            value: form[k],
+            section: "footer",
+          })),
+        }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      alert("Failed to save footer content");
+    }
+    setSaving(false);
+  }
+
+  function field(
+    key: keyof FooterData,
+    label: string,
+    type: "text" | "textarea" = "text",
+  ) {
+    return (
+      <div key={key}>
+        <Label className="text-white/50 text-xs mb-1 block">{label}</Label>
+        {type === "textarea" ? (
+          <Textarea
+            value={form[key]}
+            onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+            className="bg-[#1a1a1a] border-white/10 text-white text-sm min-h-[80px]"
+          />
+        ) : (
+          <Input
+            value={form[key]}
+            onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+            className="bg-[#1a1a1a] border-white/10 text-white text-sm"
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeader title="Footer" />
+
+      {/* About / Description */}
+      <div className="bg-[#111] border border-white/5 rounded-lg p-4 mb-4 space-y-3">
+        <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-1">
+          [About]
+        </p>
+        {field("footer_description", "Description", "textarea")}
+        <div className="grid grid-cols-2 gap-3">
+          {field("footer_facebook_url", "Facebook URL")}
+          {field("footer_instagram_url", "Instagram URL")}
+        </div>
+      </div>
+
+      {/* Menu Links */}
+      <div className="bg-[#111] border border-white/5 rounded-lg p-4 mb-4 space-y-3">
+        <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-1">
+          [Menu Links]
+        </p>
+        {([1, 2, 3, 4] as const).map((n) => (
+          <div key={n} className="grid grid-cols-2 gap-3">
+            {field(
+              `footer_menu_${n}_label` as keyof FooterData,
+              `Link ${n} Label`,
+            )}
+            {field(`footer_menu_${n}_url` as keyof FooterData, `Link ${n} URL`)}
+          </div>
+        ))}
+      </div>
+
+      {/* Contact */}
+      <div className="bg-[#111] border border-white/5 rounded-lg p-4 mb-4 space-y-3">
+        <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-1">
+          [Contact]
+        </p>
+        {field("footer_address", "Address")}
+        {field("footer_phone", "Phone")}
+        {field("footer_email", "Email")}
+      </div>
+
+      {/* Copyright */}
+      <div className="bg-[#111] border border-white/5 rounded-lg p-4 mb-6">
+        <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-2">
+          [Copyright]
+        </p>
+        {field("footer_copyright", "Copyright Text")}
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={saveAll}
+          disabled={saving}
+          className={
+            saved
+              ? "bg-green-700 text-white"
+              : "bg-red-700 hover:bg-red-600 text-white"
+          }
+        >
+          {saving ? (
+            "Saving…"
+          ) : saved ? (
+            <>
+              <Check size={14} className="mr-1" /> Saved
+            </>
+          ) : (
+            "Save All"
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── TABS ───────────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -1177,6 +1409,7 @@ const TABS = [
   "FAQ",
   "Shop Products",
   "Shop Categories",
+  "Footer",
 ] as const;
 
 type Tab = (typeof TABS)[number];
@@ -1489,6 +1722,8 @@ export function AdminContent() {
             emptyForm={{ question: "", answer: "", order: 0 } as never}
           />
         )}
+
+        {tab === "Footer" && <FooterPanel />}
       </div>
     </div>
   );

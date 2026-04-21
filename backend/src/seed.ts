@@ -382,6 +382,35 @@ async function main() {
           value: "/event-hero-image.jpg",
           section: "events_page",
         },
+        // Footer
+        {
+          key: "footer_description",
+          value:
+            "Lorem ipsum dolor sit amet consectetur. Ut a mattis augue primum planum est absque. In lorem suspendisse et blandit est ante laboribus. Vel mauris amet mi sit et amet.",
+          section: "footer",
+        },
+        { key: "footer_facebook_url", value: "#", section: "footer" },
+        { key: "footer_instagram_url", value: "#", section: "footer" },
+        { key: "footer_menu_1_label", value: "Home", section: "footer" },
+        { key: "footer_menu_1_url", value: "/", section: "footer" },
+        { key: "footer_menu_2_label", value: "About", section: "footer" },
+        { key: "footer_menu_2_url", value: "/about", section: "footer" },
+        { key: "footer_menu_3_label", value: "Membership", section: "footer" },
+        { key: "footer_menu_3_url", value: "/membership", section: "footer" },
+        { key: "footer_menu_4_label", value: "Shop", section: "footer" },
+        { key: "footer_menu_4_url", value: "/shop", section: "footer" },
+        {
+          key: "footer_address",
+          value: "Lorem Ipsum St, 25/99034,",
+          section: "footer",
+        },
+        { key: "footer_phone", value: "+990 000 0000", section: "footer" },
+        { key: "footer_email", value: "info@fitness.com", section: "footer" },
+        {
+          key: "footer_copyright",
+          value: "© 2026 Fitness. All rights reserved.",
+          section: "footer",
+        },
       ],
     });
     console.log("✅ Site text content seeded");
