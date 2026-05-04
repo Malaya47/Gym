@@ -99,7 +99,7 @@ export function StepperRegistrationForm({
   const [agreementChecks, setAgreementChecks] = useState([false, false]);
   const [termChecks, setTermChecks] = useState([false, false, false]);
   const [signatureDataUrl, setSignatureDataUrl] = useState("");
-  const [drawing, setDrawing] = useState(false);
+  const drawingRef = useRef(false);
   const [success, setSuccess] = useState("");
   const [localError, setLocalError] = useState("");
   const formShellRef = useRef<HTMLDivElement | null>(null);
@@ -125,19 +125,33 @@ export function StepperRegistrationForm({
   }, [step]);
 
   useEffect(() => {
+    if (step !== 3) return;
     const canvas = canvasRef.current;
-    if (!canvas || step !== 3) return;
-    const rect = canvas.getBoundingClientRect();
-    const scale = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(rect.width * scale);
-    canvas.height = Math.floor(rect.height * scale);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.scale(scale, scale);
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#ffffff";
+    if (!canvas) return;
+
+    const initCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(rect.width * scale);
+      canvas.height = Math.floor(rect.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.scale(scale, scale);
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#ffffff";
+    };
+
+    const rafId = requestAnimationFrame(initCanvas);
+    const ro = new ResizeObserver(initCanvas);
+    ro.observe(canvas);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, [step]);
 
   const activePlans = plans;
@@ -239,16 +253,18 @@ export function StepperRegistrationForm({
   }
 
   function beginDraw(event: React.PointerEvent<HTMLCanvasElement>) {
-    const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !canvas) return;
+    canvas.setPointerCapture(event.pointerId);
     const { x, y } = point(event);
-    setDrawing(true);
+    drawingRef.current = true;
     ctx.beginPath();
     ctx.moveTo(x, y);
   }
 
   function draw(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (!drawing) return;
+    if (!drawingRef.current) return;
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     const { x, y } = point(event);
@@ -258,7 +274,7 @@ export function StepperRegistrationForm({
   }
 
   function endDraw() {
-    setDrawing(false);
+    drawingRef.current = false;
     setSignatureDataUrl(canvasRef.current?.toDataURL("image/png") || "");
   }
 
@@ -433,7 +449,7 @@ export function StepperRegistrationForm({
       )}
 
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-4 w-full max-w-4xl mx-auto">
           {plansLoading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-white/60">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading plans
@@ -518,8 +534,9 @@ export function StepperRegistrationForm({
       )}
 
       {step === 2 && (
-        <div className="space-y-5">
-          <div className="rounded-lg bg-white/5 p-5 w-full max-w-2xl mx-auto">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_320px] w-full max-w-4xl mx-auto">
+          {/* Left: agreement */}
+          <div className="rounded-lg bg-white/5 p-5">
             <div className="mb-4 inline-flex flex-col gap-2">
               <span className="bg-white/10 px-4 py-2 text-2xl">
                 Client: {form.name || "-"}
@@ -545,18 +562,22 @@ export function StepperRegistrationForm({
               )}
             </div>
           </div>
-          <TotalBox
-            currency={currency}
-            plan={selectedPlan}
-            registrationFee={registrationFee}
-            total={total}
-          />
+          {/* Right: total */}
+          <div className="flex flex-col justify-start">
+            <TotalBox
+              currency={currency}
+              plan={selectedPlan}
+              registrationFee={registrationFee}
+              total={total}
+            />
+          </div>
         </div>
       )}
 
       {step === 3 && (
-        <div className="space-y-4">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_360px] w-full max-w-3xl mx-auto">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_320px] w-full max-w-4xl mx-auto">
+          {/* Left: terms + signature */}
+          <div className="space-y-4">
             <div className="rounded-lg bg-white/5 p-4">
               <p className="mb-4 text-sm leading-relaxed text-white/65">
                 {content.terms_text}
@@ -615,25 +636,32 @@ export function StepperRegistrationForm({
               </div>
             </div>
           </div>
-          <TotalBox
-            currency={currency}
-            plan={selectedPlan}
-            registrationFee={registrationFee}
-            total={total}
-          />
+          {/* Right: total */}
+          <div className="flex flex-col justify-start">
+            <TotalBox
+              currency={currency}
+              plan={selectedPlan}
+              registrationFee={registrationFee}
+              total={total}
+            />
+          </div>
         </div>
       )}
 
-      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between w-full max-w-2xl mx-auto">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={step === 0 || isBusy}
-          onClick={() => setStep((prev) => Math.max(prev - 1, 0) as Step)}
-          className="border-white/15 bg-transparent text-white hover:bg-white/10"
-        >
-          Back
-        </Button>
+      <div
+        className={`mt-5 flex gap-3 w-full max-w-4xl mx-auto ${step === 0 ? "justify-end" : "justify-between"}`}
+      >
+        {step > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isBusy}
+            onClick={() => setStep((prev) => Math.max(prev - 1, 0) as Step)}
+            className="border-white/15 bg-transparent text-white hover:bg-white/10"
+          >
+            Back
+          </Button>
+        )}
         {step < 3 ? (
           <Button
             type="button"
