@@ -42,7 +42,7 @@ export function HeroSection() {
   const titleLines = (text.hero_title || DEFAULTS.hero_title).split("\n");
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section className="relative md:min-h-screen flex items-start md:items-center overflow-hidden">
       {/* Blur overlay when dialog is open */}
       {open && (
         <div
@@ -89,9 +89,9 @@ export function HeroSection() {
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-20">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 pt-24 pb-8 sm:pt-28 sm:pb-0 md:pt-0 md:pb-0">
         <div className="max-w-lg">
-          <h1 className="text-[4.5rem] sm:text-[6rem] lg:text-[7.5rem] font-black text-white leading-none tracking-tight mb-6 uppercase">
+          <h1 className="text-[2.75rem] sm:text-[6rem] lg:text-[7.5rem] font-black text-white leading-none tracking-tight mb-3 sm:mb-6 uppercase">
             {titleLines.map((line, i) => (
               <span key={i}>
                 {line}
@@ -99,10 +99,10 @@ export function HeroSection() {
               </span>
             ))}
           </h1>
-          <p className="text-white/75 text-sm leading-relaxed mb-4 text-justify">
+          <p className="text-white/75 text-sm leading-snug mb-2 sm:mb-4 text-justify">
             {text.hero_subtitle1 || DEFAULTS.hero_subtitle1}
           </p>
-          <p className="text-white/75 text-sm leading-relaxed mb-8 text-justify">
+          <p className="text-white/75 text-sm leading-snug mb-4 sm:mb-8 text-justify">
             {text.hero_subtitle2 || DEFAULTS.hero_subtitle2}
           </p>
           <Button
