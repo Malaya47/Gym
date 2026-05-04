@@ -331,23 +331,13 @@ export function PricingSection() {
             <p className="mt-2 text-sm text-white/45">{activeTab.subtitle}</p>
           </div>
           <div
-            className={`
-              flex gap-6 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory
-              hide-scrollbar
-              sm:grid sm:gap-6 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0
-              sm:hide-scrollbar-none
-              ${
-                activeCategory === "ADDITIONAL"
-                  ? "sm:grid-cols-2 lg:grid-cols-2 max-w-3xl mx-auto"
-                  : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              }
-            `}
+            className="flex gap-6 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory hide-scrollbar sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 sm:justify-center"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             {activePlans.map((plan, index) => (
               <div
                 key={index}
-                className="plan-card-wrapper min-w-[85vw] max-w-[90vw] sm:min-w-0 sm:max-w-none snap-center"
+                className="plan-card-wrapper min-w-[85vw] max-w-[90vw] snap-center sm:min-w-0 sm:max-w-none sm:w-64 lg:w-[270px]"
                 style={{ flex: "0 0 auto" }}
               >
                 <div
