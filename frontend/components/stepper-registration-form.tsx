@@ -92,6 +92,9 @@ export function StepperRegistrationForm({
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState(initialForm);
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [selectedAdditionalPlanIds, setSelectedAdditionalPlanIds] = useState<
+    number[]
+  >([]);
   const [activePlanCategory, setActivePlanCategory] =
     useState<string>("MEMBERSHIP");
   const [content, setContent] =
@@ -154,22 +157,33 @@ export function StepperRegistrationForm({
     };
   }, [step]);
 
-  const activePlans = plans;
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
   const registrationFee = Number(content.registration_fee) || 0;
   const currency = selectedPlan?.currency || content.registration_currency;
-  const total = (selectedPlan?.price ?? 0) + registrationFee;
+
+  const additionalPlans = useMemo(
+    () => plans.filter((p) => p.category === "ADDITIONAL"),
+    [plans],
+  );
+  const selectedAdditionalPlans = additionalPlans.filter((p) =>
+    selectedAdditionalPlanIds.includes(p.id),
+  );
+  const additionalTotal = selectedAdditionalPlans.reduce(
+    (sum, p) => sum + p.price,
+    0,
+  );
+  const total = (selectedPlan?.price ?? 0) + additionalTotal + registrationFee;
+
   const isBusy = authLoading || purchaseLoading;
 
-  // Dynamically group plans by category
+  // All categories in one tab bar
   const categoryLabels: Record<string, string> = {
     MEMBERSHIP: "Annual",
     SHORT_TERM: "Short Term",
     ADDITIONAL: "Additional",
   };
   const groupedPlans = useMemo(() => {
-    // Get all unique categories from plans
-    const categories = Array.from(new Set(activePlans.map((p) => p.category)));
+    const categories = Array.from(new Set(plans.map((p) => p.category)));
     return categories.map((cat) => ({
       key: cat,
       label: categoryLabels[cat] || cat,
@@ -178,17 +192,15 @@ export function StepperRegistrationForm({
           ? "Membership Plans"
           : cat === "SHORT_TERM"
             ? "Short-Term Plans"
-            : cat === "ADDITIONAL"
-              ? "Additional Plans"
-              : `${cat} Plans`,
-      items: activePlans.filter((p) => p.category === cat),
+            : "Additional Plans",
+      items: plans.filter((p) => p.category === cat),
     }));
-  }, [activePlans]);
+  }, [plans]);
   const selectedPlanGroup =
     groupedPlans.find((group) => group.key === activePlanCategory) ??
     groupedPlans[0];
 
-  // Update activePlanCategory to support all categories
+  // Update activePlanCategory when grouped plans change
   useEffect(() => {
     if (
       !groupedPlans.some((g) => g.key === activePlanCategory) &&
@@ -198,6 +210,14 @@ export function StepperRegistrationForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupedPlans]);
+
+  function toggleAdditionalPlan(planId: number) {
+    setSelectedAdditionalPlanIds((prev) =>
+      prev.includes(planId)
+        ? prev.filter((id) => id !== planId)
+        : [...prev, planId],
+    );
+  }
 
   function updateForm(
     e: React.ChangeEvent<
@@ -309,6 +329,7 @@ export function StepperRegistrationForm({
     const purchase = await dispatch(
       purchaseMembership({
         planId: selectedPlan.id,
+        additionalPlanIds: selectedAdditionalPlanIds,
         registrationFee,
         totalAmount: total,
         signatureDataUrl,
@@ -449,87 +470,151 @@ export function StepperRegistrationForm({
       )}
 
       {step === 1 && (
-        <div className="space-y-4 w-full max-w-4xl mx-auto">
-          {plansLoading ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-white/60">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading plans
-            </div>
-          ) : groupedPlans.every((group) => group.items.length === 0) ? (
-            <div className="rounded-lg border border-white/10 bg-white/5 p-5 text-center text-white/60">
-              No active plans are available right now.
-            </div>
-          ) : (
-            <div>
-              <div className="mb-3 flex flex-wrap justify-center">
-                <div className="inline-flex flex-wrap rounded-full border border-white/10 bg-white/5 p-1">
-                  {groupedPlans.map((group) => (
-                    <button
-                      key={group.key}
-                      type="button"
-                      onClick={() => setActivePlanCategory(group.key)}
-                      className={`rounded-full px-5 py-2 text-xs font-semibold transition sm:text-sm ${
-                        activePlanCategory === group.key
-                          ? "bg-red-700 text-white shadow-[0_0_18px_rgba(220,38,38,0.32)]"
-                          : "text-white/55 hover:bg-white/10 hover:text-white"
-                      }`}
-                    >
-                      {group.label}
-                    </button>
-                  ))}
-                </div>
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_280px] w-full">
+          <div className="space-y-4 min-w-0">
+            {plansLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-white/60">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading plans
               </div>
-              <h3 className="mb-4 text-center text-base font-semibold sm:text-lg">
-                {selectedPlanGroup.title}
-              </h3>
-              {selectedPlanGroup.items.length === 0 ? (
-                <div className="rounded-lg border border-white/10 bg-white/5 p-5 text-center text-white/60">
-                  No plans available in this category.
-                </div>
-              ) : (
-                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  {selectedPlanGroup.items.map((plan) => {
-                    const selected = selectedPlanId === plan.id;
-                    return (
+            ) : groupedPlans.every((group) => group.items.length === 0) ? (
+              <div className="rounded-lg border border-white/10 bg-white/5 p-5 text-center text-white/60">
+                No active plans are available right now.
+              </div>
+            ) : (
+              <div>
+                {/* Tab bar: Annual | Short Term | Additional */}
+                <div className="mb-3 flex flex-wrap justify-center">
+                  <div className="inline-flex flex-wrap rounded-full border border-white/10 bg-white/5 p-1">
+                    {groupedPlans.map((group) => (
                       <button
+                        key={group.key}
                         type="button"
-                        key={plan.id}
-                        onClick={() => setSelectedPlanId(plan.id)}
-                        className={`rounded-lg border p-3 text-left transition w-full ${
-                          selected
-                            ? "border-red-500 bg-red-950/40 shadow-[0_0_24px_rgba(185,28,28,0.28)]"
-                            : "border-white/10 bg-white/5 hover:border-white/30"
+                        onClick={() => setActivePlanCategory(group.key)}
+                        className={`rounded-full px-5 py-2 text-xs font-semibold transition sm:text-sm ${
+                          activePlanCategory === group.key
+                            ? "bg-red-700 text-white shadow-[0_0_18px_rgba(220,38,38,0.32)]"
+                            : "text-white/55 hover:bg-white/10 hover:text-white"
                         }`}
                       >
-                        <p className="text-base font-semibold">
-                          {plan.duration}
-                        </p>
-                        <p className="text-sm text-white/55">
-                          {planTitle(plan)}
-                        </p>
-                        <p className="mt-2 text-lg font-bold">
-                          {money(plan.currency, plan.price)}
-                        </p>
-                        <ul className="mt-3 space-y-1 text-sm text-white/65">
-                          {plan.features.slice(0, 3).map((feature) => (
-                            <li key={feature} className="flex gap-2">
-                              <Check className="mt-0.5 h-4 w-4 text-red-400" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        {group.label}
+                        {group.key === "ADDITIONAL" &&
+                          selectedAdditionalPlanIds.length > 0 && (
+                            <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white">
+                              {selectedAdditionalPlanIds.length}
+                            </span>
+                          )}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-          <TotalBox
-            currency={currency}
-            plan={selectedPlan}
-            registrationFee={registrationFee}
-            total={total}
-          />
+
+                <h3 className="mb-4 text-center text-base font-semibold sm:text-lg">
+                  {selectedPlanGroup?.title ?? "Select a Plan"}
+                  {activePlanCategory === "ADDITIONAL" && (
+                    <span className="ml-2 text-sm font-normal text-white/40">
+                      (optional — select multiple)
+                    </span>
+                  )}
+                </h3>
+
+                {!selectedPlanGroup || selectedPlanGroup.items.length === 0 ? (
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-5 text-center text-white/60">
+                    No plans available in this category.
+                  </div>
+                ) : activePlanCategory === "ADDITIONAL" ? (
+                  /* Additional tab — multi-select */
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                    {selectedPlanGroup.items.map((plan) => {
+                      const isSelected = selectedAdditionalPlanIds.includes(
+                        plan.id,
+                      );
+                      return (
+                        <button
+                          type="button"
+                          key={plan.id}
+                          onClick={() => toggleAdditionalPlan(plan.id)}
+                          className={`rounded-lg border p-3 text-left transition w-full relative ${
+                            isSelected
+                              ? "border-red-500 bg-red-950/40 shadow-[0_0_24px_rgba(185,28,28,0.28)]"
+                              : "border-white/10 bg-white/5 hover:border-white/30"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-600">
+                              <Check className="h-3 w-3 text-white" />
+                            </span>
+                          )}
+                          <p className="text-base font-semibold pr-6">
+                            {plan.duration}
+                          </p>
+                          <p className="text-sm text-white/55">
+                            {planTitle(plan)}
+                          </p>
+                          <p className="mt-2 text-lg font-bold">
+                            {money(plan.currency, plan.price)}
+                          </p>
+                          <ul className="mt-3 space-y-1 text-sm text-white/65">
+                            {plan.features.slice(0, 3).map((feature) => (
+                              <li key={feature} className="flex gap-2">
+                                <Check className="mt-0.5 h-4 w-4 text-red-400" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* Annual / Short Term tab — single select */
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                    {selectedPlanGroup.items.map((plan) => {
+                      const selected = selectedPlanId === plan.id;
+                      return (
+                        <button
+                          type="button"
+                          key={plan.id}
+                          onClick={() => setSelectedPlanId(plan.id)}
+                          className={`rounded-lg border p-3 text-left transition w-full ${
+                            selected
+                              ? "border-red-500 bg-red-950/40 shadow-[0_0_24px_rgba(185,28,28,0.28)]"
+                              : "border-white/10 bg-white/5 hover:border-white/30"
+                          }`}
+                        >
+                          <p className="text-base font-semibold">
+                            {plan.duration}
+                          </p>
+                          <p className="text-sm text-white/55">
+                            {planTitle(plan)}
+                          </p>
+                          <p className="mt-2 text-lg font-bold">
+                            {money(plan.currency, plan.price)}
+                          </p>
+                          <ul className="mt-3 space-y-1 text-sm text-white/65">
+                            {plan.features.slice(0, 3).map((feature) => (
+                              <li key={feature} className="flex gap-2">
+                                <Check className="mt-0.5 h-4 w-4 text-red-400" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col justify-start">
+            <TotalBox
+              currency={currency}
+              plan={selectedPlan}
+              additionalPlans={selectedAdditionalPlans}
+              registrationFee={registrationFee}
+              total={total}
+            />
+          </div>
         </div>
       )}
 
@@ -567,6 +652,7 @@ export function StepperRegistrationForm({
             <TotalBox
               currency={currency}
               plan={selectedPlan}
+              additionalPlans={selectedAdditionalPlans}
               registrationFee={registrationFee}
               total={total}
             />
@@ -641,6 +727,7 @@ export function StepperRegistrationForm({
             <TotalBox
               currency={currency}
               plan={selectedPlan}
+              additionalPlans={selectedAdditionalPlans}
               registrationFee={registrationFee}
               total={total}
             />
@@ -741,11 +828,13 @@ function CheckRow({
 function TotalBox({
   currency,
   plan,
+  additionalPlans,
   registrationFee,
   total,
 }: {
   currency: string;
   plan: MembershipPlan | null;
+  additionalPlans: MembershipPlan[];
   registrationFee: number;
   total: number;
 }) {
@@ -755,6 +844,15 @@ function TotalBox({
         <span>{plan ? planTitle(plan) : "Selected plan"}</span>
         <span>{plan ? money(currency, plan.price) : "-"}</span>
       </div>
+      {additionalPlans.map((ap) => (
+        <div
+          key={ap.id}
+          className="mt-2 flex items-center justify-between gap-4 text-sm text-white/65"
+        >
+          <span>+ {planTitle(ap)}</span>
+          <span>{money(ap.currency, ap.price)}</span>
+        </div>
+      ))}
       <div className="mt-2 flex items-center justify-between gap-4 text-sm text-white/65">
         <span>Fixed registration fee</span>
         <span>{money(currency, registrationFee)}</span>

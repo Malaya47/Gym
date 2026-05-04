@@ -82,6 +82,7 @@ model MembershipPurchase {
   userId             Int
   plan               MembershipPlan @relation(fields: [planId], references: [id])
   planId             Int
+  additionalPlanIds  Int[]          @default([])
   status             ApprovalStatus @default(PENDING)
   registrationFee    Float          @default(0)
   totalAmount        Float?

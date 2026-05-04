@@ -95,6 +95,25 @@ export function AdminMemberships() {
                   Plan: <span className="text-white">{m.plan.name}</span> —{" "}
                   {m.plan.duration} — {m.plan.currency} {m.plan.price}
                 </p>
+                {m.additionalPlans && m.additionalPlans.length > 0 && (
+                  <div className="text-sm text-white/60">
+                    <span className="text-white/80 font-medium">Add-ons: </span>
+                    {m.additionalPlans.map((ap, i) => (
+                      <span key={ap.id}>
+                        <span className="text-white/80">
+                          {ap.name || ap.duration}
+                        </span>
+                        <span className="text-white/40">
+                          {" "}
+                          ({ap.currency} {ap.price})
+                        </span>
+                        {i < m.additionalPlans!.length - 1 && (
+                          <span className="text-white/30">, </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/45">
                   <span>
                     Registration fee: {m.plan.currency}{" "}

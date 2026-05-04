@@ -35,6 +35,7 @@ router.post(
     try {
       const {
         planId,
+        additionalPlanIds,
         registrationFee,
         totalAmount,
         signatureDataUrl,
@@ -54,6 +55,30 @@ router.post(
         return;
       }
 
+      // Validate and fetch additional plans
+      const additionalIds: number[] = Array.isArray(additionalPlanIds)
+        ? additionalPlanIds.map(Number).filter((n) => Number.isFinite(n))
+        : [];
+
+      let additionalPlans: (typeof plan)[] = [];
+      if (additionalIds.length > 0) {
+        additionalPlans = await prisma.membershipPlan.findMany({
+          where: {
+            id: { in: additionalIds },
+            isActive: true,
+            category: "ADDITIONAL",
+          },
+        });
+        if (additionalPlans.length !== additionalIds.length) {
+          res
+            .status(400)
+            .json({
+              error: "One or more additional plans are invalid or inactive",
+            });
+          return;
+        }
+      }
+
       // Check for existing pending/approved purchase
       const existing = await prisma.membershipPurchase.findFirst({
         where: {
@@ -63,12 +88,9 @@ router.post(
         },
       });
       if (existing) {
-        res
-          .status(409)
-          .json({
-            error:
-              "You already have an active or pending purchase for this plan",
-          });
+        res.status(409).json({
+          error: "You already have an active or pending purchase for this plan",
+        });
         return;
       }
 
@@ -81,29 +103,40 @@ router.post(
 
       const resolvedRegistrationFee =
         registrationFee !== undefined ? Number(registrationFee) : 0;
+
+      const additionalTotal = additionalPlans.reduce(
+        (sum, p) => sum + p.price,
+        0,
+      );
+
       const resolvedTotalAmount =
         totalAmount !== undefined
           ? Number(totalAmount)
-          : plan.price + resolvedRegistrationFee;
+          : plan.price + additionalTotal + resolvedRegistrationFee;
+
+      const additionalNotes =
+        additionalPlans.length > 0
+          ? `Additional plans: ${additionalPlans.map((p) => `${p.name || p.duration} (${p.currency} ${p.price})`).join(", ")}`
+          : null;
 
       const purchase = await prisma.membershipPurchase.create({
         data: {
           userId: req.userId as number,
           planId: Number(planId),
+          additionalPlanIds: additionalIds,
           status: "PENDING",
           registrationFee: Number.isFinite(resolvedRegistrationFee)
             ? resolvedRegistrationFee
             : 0,
           totalAmount: Number.isFinite(resolvedTotalAmount)
             ? resolvedTotalAmount
-            : plan.price,
+            : plan.price + additionalTotal,
           startDate: parseStartDate(details.startDate),
           emergencyContact:
             typeof details.emergencyContact === "string"
               ? details.emergencyContact
               : null,
-          address:
-            typeof details.address === "string" ? details.address : null,
+          address: typeof details.address === "string" ? details.address : null,
           acceptedAgreement: details.acceptedAgreement === true,
           acceptedTerms: details.acceptedTerms === true,
           signatureDataUrl:
@@ -115,10 +148,11 @@ router.post(
                 ? resolvedRegistrationFee
                 : 0
             }`,
+            additionalNotes,
             `Total submitted: ${plan.currency} ${
               Number.isFinite(resolvedTotalAmount)
                 ? resolvedTotalAmount
-                : plan.price
+                : plan.price + additionalTotal
             }`,
             signatureDataUrl ? "Signature captured: Yes" : null,
             Object.keys(details).length > 0
@@ -133,7 +167,7 @@ router.post(
 
       res.status(201).json({
         message: "Membership purchase submitted. Awaiting admin approval.",
-        purchase,
+        purchase: { ...purchase, additionalPlans },
       });
     } catch (err) {
       console.error(err);

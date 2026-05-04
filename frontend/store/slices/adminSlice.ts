@@ -51,6 +51,14 @@ export interface AdminMembership {
     price: number;
     currency: string;
   };
+  additionalPlanIds?: number[];
+  additionalPlans?: {
+    id: number;
+    name: string;
+    duration: string;
+    price: number;
+    currency: string;
+  }[];
 }
 
 export interface AdminOrder {

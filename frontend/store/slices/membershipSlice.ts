@@ -15,6 +15,8 @@ export interface MembershipPurchase {
   id: number;
   planId: number;
   plan: MembershipPlan;
+  additionalPlanIds: number[];
+  additionalPlans?: MembershipPlan[];
   status: "PENDING" | "APPROVED" | "REJECTED";
   notes?: string;
   createdAt: string;
@@ -59,6 +61,7 @@ export const purchaseMembership = createAsyncThunk(
       | number
       | {
           planId: number;
+          additionalPlanIds?: number[];
           registrationFee?: number;
           totalAmount?: number;
           signatureDataUrl?: string;

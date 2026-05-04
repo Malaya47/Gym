@@ -148,7 +148,29 @@ router.get(
         },
         orderBy: { createdAt: "desc" },
       });
-      res.json({ purchases });
+
+      // Attach additional plan details for each purchase
+      const allAdditionalIds = Array.from(
+        new Set(purchases.flatMap((p) => p.additionalPlanIds)),
+      );
+      const additionalPlansMap: Record<number, any> = {};
+      if (allAdditionalIds.length > 0) {
+        const additionalPlans = await prisma.membershipPlan.findMany({
+          where: { id: { in: allAdditionalIds } },
+        });
+        additionalPlans.forEach((p) => {
+          additionalPlansMap[p.id] = p;
+        });
+      }
+
+      const enriched = purchases.map((p) => ({
+        ...p,
+        additionalPlans: p.additionalPlanIds
+          .map((id) => additionalPlansMap[id])
+          .filter(Boolean),
+      }));
+
+      res.json({ purchases: enriched });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Failed to fetch memberships" });
