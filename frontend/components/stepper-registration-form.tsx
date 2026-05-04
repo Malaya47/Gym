@@ -606,7 +606,7 @@ export function StepperRegistrationForm({
               </div>
             )}
           </div>
-          <div className="flex flex-col justify-start">
+          <div className="flex flex-col justify-start gap-3">
             <TotalBox
               currency={currency}
               plan={selectedPlan}
@@ -614,6 +614,24 @@ export function StepperRegistrationForm({
               registrationFee={registrationFee}
               total={total}
             />
+            <div className="flex gap-3 justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isBusy}
+                onClick={() => setStep((prev) => Math.max(prev - 1, 0) as Step)}
+                className="border-white/15 bg-transparent text-white hover:bg-white/10"
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={goNext}
+                className="btn-gradient text-white"
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -736,7 +754,7 @@ export function StepperRegistrationForm({
       )}
 
       <div
-        className={`mt-5 flex gap-3 w-full max-w-4xl mx-auto ${step === 0 ? "justify-end" : "justify-between"}`}
+        className={`mt-5 flex gap-3 w-full max-w-4xl mx-auto ${step === 1 ? "hidden" : step === 0 ? "justify-end" : "justify-between"}`}
       >
         {step > 0 && (
           <Button
