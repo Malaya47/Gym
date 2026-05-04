@@ -146,49 +146,54 @@ export function Navbar() {
         </div>
 
         {/* Mobile menu */}
-        {isOpen && (
-          <div className="md:hidden bg-[#0a0a0a] border-t border-white/10">
-            <div className="px-4 py-4 space-y-3">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className={`block text-sm cursor-pointer py-2 px-1 ${
-                    isActive(link.href)
-                      ? "text-red-500"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {user ? (
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-white/80 text-sm">{user.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/60"
-                    onClick={() => dispatch(logout())}
-                  >
-                    <LogOut size={14} />
-                  </Button>
-                </div>
-              ) : (
+        <div
+          className={`md:hidden bg-[#0a0a0a] border-t border-white/10 transition-all duration-300 ease-in-out overflow-hidden ${
+            isOpen
+              ? "max-h-[600px] opacity-100"
+              : "max-h-0 opacity-0 pointer-events-none"
+          }`}
+          style={{ willChange: "max-height, opacity" }}
+        >
+          <div className="px-4 py-4 space-y-3">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`block text-sm cursor-pointer py-2 px-1 ${
+                  isActive(link.href)
+                    ? "text-red-500"
+                    : "text-white/80 hover:text-white"
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {user ? (
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-white/80 text-sm">{user.name}</span>
                 <Button
-                  className="w-full bg-red-600 hover:bg-red-700 text-white text-sm mt-4"
-                  onClick={() => {
-                    setIsOpen(false);
-                    setLoginOpen(true);
-                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/60"
+                  onClick={() => dispatch(logout())}
                 >
-                  Member Login
+                  <LogOut size={14} />
                 </Button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <Button
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-sm mt-4"
+                onClick={() => {
+                  setIsOpen(false);
+                  setLoginOpen(true);
+                }}
+              >
+                Member Login
+              </Button>
+            )}
           </div>
-        )}
+        </div>
       </nav>
 
       {/* Login Dialog */}

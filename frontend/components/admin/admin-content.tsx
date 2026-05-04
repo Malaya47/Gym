@@ -216,7 +216,7 @@ function RichTextEditor({
     }
     // Only update if the value differs (avoid infinite loop)
     if (editor.getHTML() !== value) {
-      editor.commands.setContent(value || "", false);
+      editor.commands.setContent(value || "", { emitUpdate: false });
     }
   }, [value, editor]);
 
@@ -1392,6 +1392,143 @@ function FooterPanel() {
   );
 }
 
+// ── REGISTRATION SETTINGS PANEL ───────────────────────────────────────────
+
+const REGISTRATION_DEFAULTS = {
+  registration_fee: "99",
+  registration_currency: "CHF",
+  agreement_text:
+    "Membership starts from the selected start date. The selected plan and registration fee are payable according to gym policy.",
+  agreement_checkbox_1: "I confirm my personal details are accurate.",
+  agreement_checkbox_2: "I understand the membership plan is submitted for approval.",
+  terms_text:
+    "Please review the gym terms, house rules, health responsibility, cancellation policy, and payment terms before signing.",
+  terms_checkbox_1: "I have read and agree to the membership terms.",
+  terms_checkbox_2: "I accept the gym rules and health responsibility policy.",
+  terms_final_checkbox: "I confirm this signature is mine.",
+};
+
+type RegistrationSettings = typeof REGISTRATION_DEFAULTS;
+
+function RegistrationSettingsPanel() {
+  const [form, setForm] = useState<RegistrationSettings>({
+    ...REGISTRATION_DEFAULTS,
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    apiFetch("/admin/content/text")
+      .then((rows: { key: string; value: string }[]) => {
+        const map: Record<string, string> = {};
+        rows.forEach((r) => (map[r.key] = r.value));
+        setForm((prev) => {
+          const merged = { ...prev };
+          (Object.keys(prev) as (keyof RegistrationSettings)[]).forEach(
+            (key) => {
+              if (map[key] !== undefined) merged[key] = map[key];
+            },
+          );
+          return merged;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  async function saveAll() {
+    setSaving(true);
+    try {
+      await apiFetch("/admin/content/text", {
+        method: "PUT",
+        body: JSON.stringify({
+          updates: (Object.keys(form) as (keyof RegistrationSettings)[]).map(
+            (key) => ({
+              key,
+              value: form[key],
+              section: "registration",
+            }),
+          ),
+        }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } catch {
+      alert("Failed to save registration settings");
+    }
+    setSaving(false);
+  }
+
+  function field(
+    key: keyof RegistrationSettings,
+    label: string,
+    type: "text" | "number" | "textarea" = "text",
+  ) {
+    return (
+      <div>
+        <Label className="text-white/50 text-xs mb-1 block">{label}</Label>
+        {type === "textarea" ? (
+          <Textarea
+            value={form[key]}
+            onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+            className="bg-[#1a1a1a] border-white/10 text-white text-sm min-h-[90px]"
+          />
+        ) : (
+          <Input
+            type={type}
+            value={form[key]}
+            onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+            className="bg-[#1a1a1a] border-white/10 text-white text-sm"
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeader title="Registration Form Settings" />
+      <div className="bg-[#111] border border-white/5 rounded-lg p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          {field("registration_fee", "Fixed Registration Fee", "number")}
+          {field("registration_currency", "Currency")}
+        </div>
+        {field("agreement_text", "Agreement Text", "textarea")}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {field("agreement_checkbox_1", "Agreement Checkbox 1")}
+          {field("agreement_checkbox_2", "Agreement Checkbox 2")}
+        </div>
+        {field("terms_text", "Terms & Conditions Text", "textarea")}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {field("terms_checkbox_1", "Terms Checkbox 1")}
+          {field("terms_checkbox_2", "Terms Checkbox 2")}
+        </div>
+        {field("terms_final_checkbox", "Signature Confirmation")}
+        <div className="flex justify-end pt-2">
+          <Button
+            onClick={saveAll}
+            disabled={saving}
+            className={
+              saved
+                ? "bg-green-700 hover:bg-green-700 text-white"
+                : "bg-red-700 hover:bg-red-600 text-white"
+            }
+          >
+            {saving ? (
+              "Saving..."
+            ) : saved ? (
+              <>
+                <Check size={14} className="mr-1" /> Saved
+              </>
+            ) : (
+              "Save Registration Settings"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── TABS ───────────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -1406,6 +1543,7 @@ const TABS = [
   "Events",
   "Training Zones",
   "Membership Plans",
+  "Registration",
   "FAQ",
   "Shop Products",
   "Shop Categories",
@@ -1658,6 +1796,8 @@ export function AdminContent() {
         )}
 
         {tab === "Membership Plans" && <MembershipPlansPanel />}
+
+        {tab === "Registration" && <RegistrationSettingsPanel />}
 
         {tab === "Shop Products" && (
           <CrudPanel

@@ -95,6 +95,34 @@ export function AdminMemberships() {
                   Plan: <span className="text-white">{m.plan.name}</span> —{" "}
                   {m.plan.duration} — {m.plan.currency} {m.plan.price}
                 </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/45">
+                  <span>
+                    Registration fee: {m.plan.currency}{" "}
+                    {(m.registrationFee ?? 0).toFixed(2)}
+                  </span>
+                  <span>
+                    Total: {m.plan.currency}{" "}
+                    {(m.totalAmount ?? m.plan.price).toFixed(2)}
+                  </span>
+                  {m.startDate && (
+                    <span>
+                      Start date: {new Date(m.startDate).toLocaleDateString()}
+                    </span>
+                  )}
+                  {m.emergencyContact && (
+                    <span>Emergency: {m.emergencyContact}</span>
+                  )}
+                  {m.address && (
+                    <span className="md:col-span-2">Address: {m.address}</span>
+                  )}
+                  <span>
+                    Agreement: {m.acceptedAgreement ? "Accepted" : "Pending"}
+                  </span>
+                  <span>Terms: {m.acceptedTerms ? "Accepted" : "Pending"}</span>
+                  <span>
+                    Signature: {m.signatureDataUrl ? "Captured" : "Missing"}
+                  </span>
+                </div>
                 <p className="text-xs text-white/30">
                   Requested: {new Date(m.createdAt).toLocaleString()}
                 </p>

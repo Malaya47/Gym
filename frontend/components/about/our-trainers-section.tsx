@@ -23,7 +23,7 @@ export async function OurTrainersSection() {
   const ph = "/trainer-image.png";
 
   return (
-    <section className="py-20 bg-transparent">
+    <section className="bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <div className="text-center mb-14">
@@ -38,9 +38,9 @@ export async function OurTrainersSection() {
 
         {trainers.length >= 2 && (
           <>
-            {/* Row 1: text | image | text | image */}
-            <div className="grid grid-cols-4 gap-6 mb-6">
-              <div className="flex flex-col justify-center">
+            {/* Horizontal scroll for mobile, grid for large screens */}
+            <div className="grid grid-cols-1 gap-6 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex flex-col justify-center order-1">
                 <h3 className="text-white text-xl font-semibold mb-3">
                   {trainers[0].name}
                 </h3>
@@ -48,7 +48,7 @@ export async function OurTrainersSection() {
                   {trainers[0].description}
                 </p>
               </div>
-              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden order-2">
                 <Image
                   src={getImageUrl(trainers[0].image) || ph}
                   alt={trainers[0].name}
@@ -58,7 +58,7 @@ export async function OurTrainersSection() {
               </div>
               {trainers[1] && (
                 <>
-                  <div className="flex flex-col justify-center">
+                  <div className="flex flex-col justify-center order-4 lg:order-3">
                     <h3 className="text-white text-xl font-semibold mb-3">
                       {trainers[1].name}
                     </h3>
@@ -66,7 +66,7 @@ export async function OurTrainersSection() {
                       {trainers[1].description}
                     </p>
                   </div>
-                  <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                  <div className="relative aspect-[4/5] rounded-2xl overflow-hidden order-3 lg:order-4">
                     <Image
                       src={getImageUrl(trainers[1].image) || ph}
                       alt={trainers[1].name}
@@ -78,10 +78,9 @@ export async function OurTrainersSection() {
               )}
             </div>
 
-            {/* Row 2: image | text | image | text */}
             {trainers.length >= 4 && (
-              <div className="grid grid-cols-4 gap-6">
-                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden order-1">
                   <Image
                     src={getImageUrl(trainers[2].image) || ph}
                     alt={trainers[2].name}
@@ -89,7 +88,7 @@ export async function OurTrainersSection() {
                     className="object-cover object-top"
                   />
                 </div>
-                <div className="flex flex-col justify-center">
+                <div className="flex flex-col justify-center order-2">
                   <h3 className="text-white text-xl font-semibold mb-3">
                     {trainers[2].name}
                   </h3>
@@ -97,7 +96,7 @@ export async function OurTrainersSection() {
                     {trainers[2].description}
                   </p>
                 </div>
-                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden order-3">
                   <Image
                     src={getImageUrl(trainers[3].image) || ph}
                     alt={trainers[3].name}
@@ -105,7 +104,7 @@ export async function OurTrainersSection() {
                     className="object-cover object-top"
                   />
                 </div>
-                <div className="flex flex-col justify-center">
+                <div className="flex flex-col justify-center order-4">
                   <h3 className="text-white text-xl font-semibold mb-3">
                     {trainers[3].name}
                   </h3>

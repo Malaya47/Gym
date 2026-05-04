@@ -37,7 +37,7 @@ export function EquipmentsSection() {
   ];
 
   return (
-    <section className="py-20 bg-transparent">
+    <section className="mt-10 bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 tracking-tight">
@@ -48,9 +48,9 @@ export function EquipmentsSection() {
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-12">
+        <div className="flex flex-col-reverse md:flex-row items-center gap-12">
           {/* Left – Feature list */}
-          <div className="w-full md:w-[38%] flex-shrink-0">
+          <div className="w-full md:w-[38%] flex-shrink-0 mt-8 md:mt-0">
             <ul className="space-y-7">
               {features.map((feature, idx) => (
                 <li
@@ -67,7 +67,7 @@ export function EquipmentsSection() {
           {/* Right – Staggered images */}
           <div
             className="w-full md:flex-1 relative"
-            style={{ height: "460px" }}
+            style={{ height: "360px", minHeight: 220, maxHeight: 460 }}
           >
             {/* Image 1 – top, offset from left, large landscape */}
             <GradientBorderImage

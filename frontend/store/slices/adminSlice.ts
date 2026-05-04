@@ -32,6 +32,15 @@ export interface AdminUser {
 export interface AdminMembership {
   id: number;
   status: string;
+  registrationFee?: number;
+  totalAmount?: number;
+  startDate?: string;
+  emergencyContact?: string;
+  address?: string;
+  acceptedAgreement?: boolean;
+  acceptedTerms?: boolean;
+  signatureDataUrl?: string;
+  registrationDetails?: Record<string, unknown>;
   notes?: string;
   createdAt: string;
   user: { id: number; name: string; email: string };

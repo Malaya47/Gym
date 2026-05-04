@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { getTrainingZones, getSiteText, getImageUrl } from "@/lib/content";
+import React from "react";
 
 export async function TrainingZonesSection() {
   const [zones, text] = await Promise.all([
@@ -45,9 +46,39 @@ export async function TrainingZonesSection() {
           </p>
         </div>
 
-        {/* Grid: 3 equal cols, 2 equal rows */}
+        {/* Mobile: Horizontal carousel with hidden scrollbar */}
+        <style>{`
+          .tz-scrollbar-hide {
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+          }
+          .tz-scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        <div className="block lg:hidden">
+          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory tz-scrollbar-hide">
+            {display.map((zone, idx) => (
+              <div
+                key={zone.id ?? idx}
+                className="relative min-w-[260px] h-[320px] rounded-2xl overflow-hidden snap-center flex-shrink-0"
+              >
+                <Image
+                  src={
+                    getImageUrl(zone.image) || `/training-zone-${idx + 1}.png`
+                  }
+                  alt={zone.alt}
+                  fill
+                  className="object-cover object-center"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: Original grid layout */}
         <div
-          className="grid gap-4"
+          className="hidden lg:grid gap-4"
           style={{
             gridTemplateColumns: "1fr 1fr 1fr",
             gridTemplateRows: "300px 280px",

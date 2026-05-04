@@ -2,18 +2,11 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { registerUser, clearError } from "@/store/slices/authSlice";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useAppDispatch } from "@/store/hooks";
+import { clearError } from "@/store/slices/authSlice";
 import { SiteText, getImageUrl } from "@/lib/content";
+import { StepperRegistrationForm } from "@/components/stepper-registration-form";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -28,22 +21,8 @@ const DEFAULTS: SiteText = {
 
 export function HeroSection() {
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((s) => s.auth);
   const [open, setOpen] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [text, setText] = useState<SiteText>(DEFAULTS);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    age: "",
-    gender: "",
-    weight: "",
-    height: "",
-    phone: "",
-    goal: "",
-    experience: "",
-  });
 
   useEffect(() => {
     fetch(`${API}/content/text/hero`)
@@ -52,42 +31,10 @@ export function HeroSection() {
       .catch(() => {});
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = await dispatch(
-      registerUser({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        phone: form.phone || undefined,
-        age: form.age ? Number(form.age) : undefined,
-        gender: form.gender || undefined,
-        weight: form.weight ? Number(form.weight) : undefined,
-        height: form.height ? Number(form.height) : undefined,
-        goal: form.goal || undefined,
-        experience: form.experience || undefined,
-      }),
-    );
-    if (registerUser.fulfilled.match(result)) {
-      setSuccess(true);
-      setTimeout(() => {
-        setOpen(false);
-        setSuccess(false);
-      }, 1500);
-    }
-  };
-
   const handleOpenChange = (val: boolean) => {
     setOpen(val);
     if (!val) {
       dispatch(clearError());
-      setSuccess(false);
     }
   };
 
@@ -103,21 +50,20 @@ export function HeroSection() {
           style={{ pointerEvents: "none" }}
         />
       )}
-      {/* Right-side man image — placed in the right 60% so it isn't zoomed */}
-      <div className="absolute right-0 top-0 bottom-0 w-[65%]">
+      {/* Right-side man image — full-width on mobile, right 65% on desktop */}
+      <div className="absolute right-0 top-0 bottom-0 w-full md:w-[65%]">
         <Image
           src={heroImage}
           alt="Fitness background"
           fill
-          className="object-cover"
-          style={{ objectPosition: "center center" }}
+          className="object-cover object-[70%_center] md:object-center"
           priority
         />
-        {/* Subtle dark veil so the image stays moody */}
-        <div className="absolute inset-0 bg-black/30" />
-        {/* Left-side fade: image blends into the dark background */}
+        {/* Dark veil — stronger on mobile for text readability */}
+        <div className="absolute inset-0 bg-black/60 md:bg-black/30" />
+        {/* Left-side fade: image blends into dark background (desktop only) */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 hidden md:block"
           style={{
             background:
               "linear-gradient(to right, #08010a 0%, rgba(8,1,10,0.6) 20%, transparent 50%)",
@@ -133,9 +79,9 @@ export function HeroSection() {
         />
       </div>
 
-      {/* Solid dark background for the left text panel */}
+      {/* Solid dark background for the left text panel (desktop only) */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 hidden md:block"
         style={{
           background:
             "linear-gradient(to right, #08010a 0%, #08010a 38%, rgba(8,1,10,0.4) 52%, transparent 65%)",
@@ -168,196 +114,12 @@ export function HeroSection() {
 
           <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent
-              className="max-w-md w-full bg-[#08010a] border-none"
+              className="max-h-[80vh] w-[94vw] !max-w-[1220px] overflow-y-auto bg-[#08010a] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.75)] sm:!max-w-[1220px] sm:p-6 lg:w-[88vw]"
               style={{
                 border: "2px solid #733EA6",
               }}
             >
-              <DialogHeader>
-                <DialogTitle className="text-white text-2xl font-bold mb-2">
-                  Membership Form
-                </DialogTitle>
-              </DialogHeader>
-              {success ? (
-                <div className="py-8 text-center">
-                  <p className="text-green-400 text-lg font-semibold">
-                    ✅ Registered successfully! Welcome aboard.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {error && (
-                    <div className="bg-red-900/40 border border-red-500 text-red-300 text-sm rounded px-3 py-2">
-                      {error}
-                    </div>
-                  )}
-                  <div>
-                    <Label htmlFor="name" className="text-white mb-1 block">
-                      Name
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                      className="bg-[#18181b] text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email" className="text-white mb-1 block">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      className="bg-[#18181b] text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password" className="text-white mb-1 block">
-                      Password
-                    </Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={form.password}
-                      onChange={handleChange}
-                      required
-                      minLength={6}
-                      className="bg-[#18181b] text-white"
-                    />
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Label htmlFor="age" className="text-white mb-1 block">
-                        Age
-                      </Label>
-                      <Input
-                        id="age"
-                        name="age"
-                        type="number"
-                        min="10"
-                        max="100"
-                        value={form.age}
-                        onChange={handleChange}
-                        required
-                        className="bg-[#18181b] text-white"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor="gender" className="text-white mb-1 block">
-                        Gender
-                      </Label>
-                      <select
-                        id="gender"
-                        name="gender"
-                        value={form.gender}
-                        onChange={handleChange}
-                        required
-                        className="bg-[#18181b] text-white w-full rounded-md px-3 py-2"
-                      >
-                        <option value="">Select</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Label htmlFor="weight" className="text-white mb-1 block">
-                        Weight (kg)
-                      </Label>
-                      <Input
-                        id="weight"
-                        name="weight"
-                        type="number"
-                        value={form.weight}
-                        onChange={handleChange}
-                        required
-                        className="bg-[#18181b] text-white"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor="height" className="text-white mb-1 block">
-                        Height (cm)
-                      </Label>
-                      <Input
-                        id="height"
-                        name="height"
-                        type="number"
-                        value={form.height}
-                        onChange={handleChange}
-                        required
-                        className="bg-[#18181b] text-white"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="phone" className="text-white mb-1 block">
-                      Phone
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={form.phone}
-                      onChange={handleChange}
-                      required
-                      className="bg-[#18181b] text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="goal" className="text-white mb-1 block">
-                      Fitness Goal
-                    </Label>
-                    <Input
-                      id="goal"
-                      name="goal"
-                      value={form.goal}
-                      onChange={handleChange}
-                      placeholder="e.g. Weight Loss, Muscle Gain"
-                      className="bg-[#18181b] text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="experience"
-                      className="text-white mb-1 block"
-                    >
-                      Experience Level
-                    </Label>
-                    <select
-                      id="experience"
-                      name="experience"
-                      value={form.experience}
-                      onChange={handleChange}
-                      required
-                      className="bg-[#18181b] text-white w-full rounded-md px-3 py-2"
-                    >
-                      <option value="">Select</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="btn-gradient hover:bg-[#8f1f1f] text-white w-full "
-                    >
-                      {loading ? "Submitting..." : "Submit"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              )}
+              <StepperRegistrationForm onComplete={() => setOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>

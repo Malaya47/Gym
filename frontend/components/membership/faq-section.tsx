@@ -60,11 +60,21 @@ export function FaqSection() {
                   )}
                 </button>
 
-                {isOpen && (
-                  <div className="px-6 pb-6 text-white/70 text-sm sm:text-base leading-relaxed border-t border-white/10 pt-4">
-                    {faq.answer}
-                  </div>
-                )}
+                <div
+                  className={`px-6 pb-6 text-white/70 text-sm sm:text-base leading-relaxed border-t border-white/10 pt-4 transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0 border-t-0 pt-0 pb-0"}`}
+                  style={{
+                    maxHeight: isOpen ? 400 : 0,
+                    opacity: isOpen ? 1 : 0,
+                    transition:
+                      "max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s cubic-bezier(0.4,0,0.2,1), padding 0.3s cubic-bezier(0.4,0,0.2,1)",
+                    paddingTop: isOpen ? 16 : 0,
+                    paddingBottom: isOpen ? 24 : 0,
+                    borderTopWidth: isOpen ? 1 : 0,
+                  }}
+                  aria-hidden={!isOpen}
+                >
+                  {faq.answer}
+                </div>
               </div>
             );
           })}

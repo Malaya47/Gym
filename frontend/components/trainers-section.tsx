@@ -12,7 +12,7 @@ export async function TrainersSection() {
   const preview = trainers.slice(0, 4);
 
   return (
-    <section className="py-20 bg-transparent">
+    <section className="py-5 bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-4">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
@@ -24,11 +24,18 @@ export async function TrainersSection() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+        <div
+          className={`
+            flex gap-6 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory hide-scrollbar
+            sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 sm:hide-scrollbar-none mt-12
+          `}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {preview.map((trainer, index) => (
             <div
               key={trainer.id}
-              className="group relative rounded-xl overflow-hidden bg-[#1a0a12]/80 aspect-[3/4] backdrop-blur-sm"
+              className="group relative rounded-xl overflow-hidden bg-[#1a0a12]/80 aspect-[3/4] backdrop-blur-sm min-w-[85vw] max-w-[90vw] sm:min-w-0 sm:max-w-none snap-center"
+              style={{ flex: "0 0 auto" }}
             >
               <Image
                 src={getImageUrl(trainer.image) || "/trainer-preview.png"}
@@ -49,7 +56,7 @@ export async function TrainersSection() {
           ))}
         </div>
 
-        <div className="text-center mt-10">
+        <div className="text-center mt-10 mb-10">
           <Button
             variant="outline"
             className=" text-red-500 hover:bg-red-500 hover:text-white btn-gradient"
@@ -58,7 +65,7 @@ export async function TrainersSection() {
           </Button>
         </div>
         {/* Separation line  */}
-        <div
+        {/* <div
           className="w-full flex justify-center items-center relative"
           style={{ height: "40px" }}
         >
@@ -91,7 +98,7 @@ export async function TrainersSection() {
               zIndex: 1,
             }}
           />
-        </div>
+        </div> */}
       </div>
     </section>
   );

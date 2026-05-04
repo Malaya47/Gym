@@ -54,9 +54,21 @@ export const fetchPlans = createAsyncThunk(
 
 export const purchaseMembership = createAsyncThunk(
   "membership/purchase",
-  async (planId: number, { rejectWithValue }) => {
+  async (
+    data:
+      | number
+      | {
+          planId: number;
+          registrationFee?: number;
+          totalAmount?: number;
+          signatureDataUrl?: string;
+          registrationDetails?: Record<string, unknown>;
+        },
+    { rejectWithValue },
+  ) => {
     try {
-      const res = await api.post("/membership/purchase", { planId });
+      const body = typeof data === "number" ? { planId: data } : data;
+      const res = await api.post("/membership/purchase", body);
       return res.data as { message: string; purchase: MembershipPurchase };
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || "Purchase failed");

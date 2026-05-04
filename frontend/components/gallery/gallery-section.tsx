@@ -1,5 +1,20 @@
 "use client";
 
+// Simple useMediaQuery hook
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [matches, query]);
+  return matches;
+}
+
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
@@ -147,6 +162,7 @@ function GalleryImg({ src, alt }: { src: string; alt: string }) {
 }
 
 export function GallerySection() {
+  const isDesktop = useMediaQuery("(min-width: 768px)"); // md breakpoint
   const [activeCategory, setActiveCategory] = useState("All");
   const [images, setImages] = useState<GalleryImageType[]>(DEFAULT_IMAGES);
   const [text, setText] = useState<SiteText>({});
@@ -189,49 +205,63 @@ export function GallerySection() {
           </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div
-          className="flex items-center gap-1 p-1 w-full mb-10 rounded-full border border-white/10"
-          style={{
-            background: "#0300044D",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`flex-1 text-center px-5 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                activeCategory === cat
-                  ? "bg-[#7a1f2e] text-white"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* Filter Tabs - Compact pill tabs on mobile, horizontal row on larger screens */}
+        <div className="w-full mb-10">
+          <div className="flex flex-row flex-wrap sm:flex-nowrap gap-2 sm:gap-1 justify-center">
+            {categories.map((cat) => {
+              const isActive = activeCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-5 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap
+                    ${
+                      isActive
+                        ? "bg-[#7a1f2e] text-white border border-[#7a1f2e]"
+                        : "bg-transparent text-white border border-white/60 hover:text-white hover:border-white"
+                    }
+                  `}
+                  style={{
+                    minWidth: "auto",
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* All view: exact CSS grid matching the screenshot */}
+        {/* All view: side-by-side grid on mobile, custom grid on large screens (only one rendered at a time) */}
         {activeCategory === "All" ? (
-          <div
-            className="w-full"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gridTemplateRows: "200px 200px 200px",
-              gap: "12px",
-            }}
-          >
-            {gridItems.map((item) => (
-              <div
-                key={item.id}
-                style={{ gridColumn: item.gridCol!, gridRow: item.gridRow! }}
-              >
-                <GalleryImg src={getImageUrl(item.src)} alt={item.alt} />
-              </div>
-            ))}
-          </div>
+          isDesktop ? (
+            <div
+              className="w-full"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                gridTemplateRows: "200px 200px 200px",
+                gap: "12px",
+              }}
+            >
+              {gridItems.map((item) => (
+                <div
+                  key={item.id}
+                  style={{ gridColumn: item.gridCol!, gridRow: item.gridRow! }}
+                >
+                  <GalleryImg src={getImageUrl(item.src)} alt={item.alt} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {gridItems.map((img) => (
+                <div key={img.id} className="aspect-square">
+                  <GalleryImg src={getImageUrl(img.src)} alt={img.alt} />
+                </div>
+              ))}
+            </div>
+          )
         ) : (
           /* Filtered view: simple responsive grid */
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

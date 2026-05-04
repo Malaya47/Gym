@@ -23,7 +23,7 @@ export async function TestimonialsSection() {
         ];
 
   return (
-    <section className="py-10 bg-transparent">
+    <section className="bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
@@ -35,12 +35,18 @@ export async function TestimonialsSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div
+          className={`
+            flex gap-8 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory hide-scrollbar
+            md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:pb-0 md:mx-0 md:px-0 md:hide-scrollbar-none
+          `}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {display.map((testimonial) => (
             <div
               key={testimonial.id}
-              className="relative rounded-xl p-8 border border-[#733EA6] shadow-[0_0_8px_0_#733EA6] backdrop-blur-sm"
-              style={{ background: "#0300044D" }}
+              className="relative rounded-xl p-8 border border-[#733EA6] shadow-[0_0_8px_0_#733EA6] backdrop-blur-sm min-w-[85vw] max-w-[90vw] md:min-w-0 md:max-w-none snap-center"
+              style={{ background: "#0300044D", flex: "0 0 auto" }}
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">

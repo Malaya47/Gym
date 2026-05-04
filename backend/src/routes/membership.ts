@@ -1,8 +1,15 @@
 import { Router, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 
 const router = Router();
+
+function parseStartDate(value: unknown) {
+  if (!value || typeof value !== "string") return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 // ─── GET /api/membership/plans ──────────────────────────
 // Public – list all active membership plans
@@ -26,7 +33,13 @@ router.post(
   requireAuth,
   async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { planId } = req.body;
+      const {
+        planId,
+        registrationFee,
+        totalAmount,
+        signatureDataUrl,
+        registrationDetails,
+      } = req.body;
 
       if (!planId) {
         res.status(400).json({ error: "planId is required" });
@@ -59,11 +72,61 @@ router.post(
         return;
       }
 
+      const details =
+        registrationDetails &&
+        typeof registrationDetails === "object" &&
+        !Array.isArray(registrationDetails)
+          ? (registrationDetails as Record<string, unknown>)
+          : {};
+
+      const resolvedRegistrationFee =
+        registrationFee !== undefined ? Number(registrationFee) : 0;
+      const resolvedTotalAmount =
+        totalAmount !== undefined
+          ? Number(totalAmount)
+          : plan.price + resolvedRegistrationFee;
+
       const purchase = await prisma.membershipPurchase.create({
         data: {
           userId: req.userId as number,
           planId: Number(planId),
           status: "PENDING",
+          registrationFee: Number.isFinite(resolvedRegistrationFee)
+            ? resolvedRegistrationFee
+            : 0,
+          totalAmount: Number.isFinite(resolvedTotalAmount)
+            ? resolvedTotalAmount
+            : plan.price,
+          startDate: parseStartDate(details.startDate),
+          emergencyContact:
+            typeof details.emergencyContact === "string"
+              ? details.emergencyContact
+              : null,
+          address:
+            typeof details.address === "string" ? details.address : null,
+          acceptedAgreement: details.acceptedAgreement === true,
+          acceptedTerms: details.acceptedTerms === true,
+          signatureDataUrl:
+            typeof signatureDataUrl === "string" ? signatureDataUrl : null,
+          registrationDetails: details as Prisma.InputJsonValue,
+          notes: [
+            `Registration fee: ${plan.currency} ${
+              Number.isFinite(resolvedRegistrationFee)
+                ? resolvedRegistrationFee
+                : 0
+            }`,
+            `Total submitted: ${plan.currency} ${
+              Number.isFinite(resolvedTotalAmount)
+                ? resolvedTotalAmount
+                : plan.price
+            }`,
+            signatureDataUrl ? "Signature captured: Yes" : null,
+            Object.keys(details).length > 0
+              ? `Registration details: ${JSON.stringify(details)}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n"),
         },
         include: { plan: true },
       });

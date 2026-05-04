@@ -77,15 +77,24 @@ model MembershipPlan {
 
 // ─── Membership Purchase ────────────────────────────────
 model MembershipPurchase {
-  id        Int            @id @default(autoincrement())
-  user      User           @relation(fields: [userId], references: [id])
-  userId    Int
-  plan      MembershipPlan @relation(fields: [planId], references: [id])
-  planId    Int
-  status    ApprovalStatus @default(PENDING)
-  notes     String?        // admin can add notes
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id                 Int            @id @default(autoincrement())
+  user               User           @relation(fields: [userId], references: [id])
+  userId             Int
+  plan               MembershipPlan @relation(fields: [planId], references: [id])
+  planId             Int
+  status             ApprovalStatus @default(PENDING)
+  registrationFee    Float          @default(0)
+  totalAmount        Float?
+  startDate          DateTime?
+  emergencyContact   String?
+  address            String?        @db.Text
+  acceptedAgreement  Boolean        @default(false)
+  acceptedTerms      Boolean        @default(false)
+  signatureDataUrl   String?        @db.Text
+  registrationDetails Json?
+  notes              String?        // admin can add notes
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 }
 
 // ─── CMS: Site Content (key-value text/headings) ───────

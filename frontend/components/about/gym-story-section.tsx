@@ -7,12 +7,12 @@ export async function GymStorySection() {
   );
 
   return (
-    <section className="py-20 bg-transparent">
+    <section className="bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-12">
           {/* Left - Title */}
-          <div className="flex flex-col items-start w-full md:w-auto md:min-w-[420px]">
-            <h2 className="text-5xl sm:text-6xl font-extrabold text-white leading-tight whitespace-pre-line">
+          <div className="flex flex-col items-center md:items-start w-full md:w-auto md:min-w-[420px]">
+            <h2 className="text-5xl sm:text-6xl font-extrabold text-white leading-tight whitespace-pre-line text-center md:text-left">
               {titleLines.join("\n")}
             </h2>
           </div>

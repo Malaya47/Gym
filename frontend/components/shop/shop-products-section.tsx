@@ -229,8 +229,9 @@ export function ShopProductsSection() {
         )}
 
         {/* Category Tabs */}
+        {/* Responsive Category Tabs (no horizontal scroll, always wraps) */}
         <div
-          className="flex gap-2 flex-wrap mb-10 p-2 rounded-xl"
+          className="flex gap-2 mb-10 p-2 rounded-xl flex-wrap"
           style={{
             background: "#0300044D",
             border: "1px solid rgba(255,255,255,0.1)",
