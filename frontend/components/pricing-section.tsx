@@ -9,6 +9,7 @@ import {
   purchaseMembership,
   clearMembershipMessages,
 } from "@/store/slices/membershipSlice";
+import { openLoginModal } from "@/store/slices/authSlice";
 
 export function PricingSection() {
   const dispatch = useAppDispatch();
@@ -237,10 +238,19 @@ export function PricingSection() {
               Please log in first to purchase a membership.
             </p>
             <button
+              onClick={() => {
+                setShowLoginAlert(false);
+                dispatch(openLoginModal());
+              }}
+              className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-colors"
+            >
+              Login
+            </button>
+            <button
               onClick={() => setShowLoginAlert(false)}
               className="w-full py-2.5 rounded-lg border border-white/20 text-white/70 hover:text-white hover:bg-white/10 font-semibold text-sm transition-colors"
             >
-              OK
+              Cancel
             </button>
           </div>
         </div>

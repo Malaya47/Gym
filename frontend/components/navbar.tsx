@@ -14,16 +14,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loginUser, logout, clearError } from "@/store/slices/authSlice";
+import {
+  loginUser,
+  logout,
+  clearError,
+  openLoginModal,
+  closeLoginModal,
+} from "@/store/slices/authSlice";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user, loading, error } = useAppSelector((s) => s.auth);
+  const { user, loading, error, loginModalOpen } = useAppSelector(
+    (s) => s.auth,
+  );
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -48,15 +55,16 @@ export function Navbar() {
     e.preventDefault();
     const result = await dispatch(loginUser(loginForm));
     if (loginUser.fulfilled.match(result)) {
-      setLoginOpen(false);
+      dispatch(closeLoginModal());
       setLoginForm({ email: "", password: "" });
     }
   };
 
   const handleLoginOpenChange = (val: boolean) => {
-    setLoginOpen(val);
-    if (!val) {
-      dispatch(clearError());
+    if (val) {
+      dispatch(openLoginModal());
+    } else {
+      dispatch(closeLoginModal());
       setLoginForm({ email: "", password: "" });
     }
   };
@@ -128,7 +136,7 @@ export function Navbar() {
               ) : (
                 <Button
                   className="self-center btn-gradient hover:bg-red-700 text-white text-sm px-4 cursor-pointer"
-                  onClick={() => setLoginOpen(true)}
+                  onClick={() => dispatch(openLoginModal())}
                 >
                   Member Login
                 </Button>
@@ -186,7 +194,7 @@ export function Navbar() {
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-sm mt-4"
                 onClick={() => {
                   setIsOpen(false);
-                  setLoginOpen(true);
+                  dispatch(openLoginModal());
                 }}
               >
                 Member Login
@@ -197,7 +205,7 @@ export function Navbar() {
       </nav>
 
       {/* Login Dialog */}
-      <Dialog open={loginOpen} onOpenChange={handleLoginOpenChange}>
+      <Dialog open={loginModalOpen} onOpenChange={handleLoginOpenChange}>
         <DialogContent
           className="max-w-sm w-full bg-[#08010a]"
           style={{ border: "2px solid #733EA6" }}

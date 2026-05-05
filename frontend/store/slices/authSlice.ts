@@ -16,6 +16,7 @@ interface AuthState {
   token: string | null;
   loading: boolean;
   error: string | null;
+  loginModalOpen: boolean;
 }
 
 const initialState: AuthState = {
@@ -24,6 +25,7 @@ const initialState: AuthState = {
     typeof window !== "undefined" ? localStorage.getItem("gym_token") : null,
   loading: false,
   error: null,
+  loginModalOpen: false,
 };
 
 // ─── Thunks ─────────────────────────────────────────────
@@ -99,6 +101,13 @@ const authSlice = createSlice({
     clearError(state) {
       state.error = null;
     },
+    openLoginModal(state) {
+      state.loginModalOpen = true;
+    },
+    closeLoginModal(state) {
+      state.loginModalOpen = false;
+      state.error = null;
+    },
     setToken(state, action: PayloadAction<string>) {
       state.token = action.payload;
     },
@@ -154,5 +163,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, setToken } = authSlice.actions;
+export const { logout, clearError, setToken, openLoginModal, closeLoginModal } =
+  authSlice.actions;
 export default authSlice.reducer;
