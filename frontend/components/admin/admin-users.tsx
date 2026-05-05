@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAdminUsers } from "@/store/slices/adminSlice";
-import { Users } from "lucide-react";
+import { AdminUserDetail } from "./admin-user-detail";
+import { Users, ChevronRight } from "lucide-react";
 
 export function AdminUsers() {
   const dispatch = useAppDispatch();
   const { users, loading } = useAppSelector((s) => s.admin);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
     dispatch(fetchAdminUsers());
@@ -17,6 +19,15 @@ export function AdminUsers() {
     if (!g) return "—";
     return g.charAt(0) + g.slice(1).toLowerCase();
   };
+
+  if (selectedUserId !== null) {
+    return (
+      <AdminUserDetail
+        userId={selectedUserId}
+        onBack={() => setSelectedUserId(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -51,13 +62,15 @@ export function AdminUsers() {
                   </th>
                   <th className="text-left px-4 py-3 font-medium">Orders</th>
                   <th className="text-left px-4 py-3 font-medium">Joined</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                    onClick={() => setSelectedUserId(user.id)}
+                    className="border-b border-white/5 hover:bg-white/4 transition-colors cursor-pointer group"
                   >
                     <td className="px-4 py-3 text-white/30">{user.id}</td>
                     <td className="px-4 py-3 text-white font-medium">
@@ -73,7 +86,7 @@ export function AdminUsers() {
                     <td className="px-4 py-3 text-white/60">
                       {genderLabel(user.gender)}
                     </td>
-                    <td className="px-4 py-3 text-white/60 max-w-[120px] truncate">
+                    <td className="px-4 py-3 text-white/60 max-w-30 truncate">
                       {user.goal || "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -88,6 +101,9 @@ export function AdminUsers() {
                     </td>
                     <td className="px-4 py-3 text-white/40 whitespace-nowrap">
                       {new Date(user.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-white/20 group-hover:text-white/60 transition-colors">
+                      <ChevronRight size={15} />
                     </td>
                   </tr>
                 ))}

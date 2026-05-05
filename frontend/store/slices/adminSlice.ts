@@ -84,11 +84,36 @@ export interface AdminStats {
   totalOrders: number;
 }
 
+export interface AdminUserDetail {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  age?: number;
+  gender?: string;
+  weight?: number;
+  height?: number;
+  goal?: string;
+  experience?: string;
+  createdAt: string;
+  memberships: (Omit<AdminMembership, "user"> & {
+    additionalPlans: {
+      id: number;
+      name: string;
+      duration: string;
+      price: number;
+      currency: string;
+    }[];
+  })[];
+  orders: Omit<AdminOrder, "user">[];
+}
+
 interface AdminState {
   admin: { id: number; name: string; email: string } | null;
   token: string | null;
   stats: AdminStats | null;
   users: AdminUser[];
+  selectedUser: AdminUserDetail | null;
   memberships: AdminMembership[];
   orders: AdminOrder[];
   loading: boolean;
@@ -104,6 +129,7 @@ const initialState: AdminState = {
       : null,
   stats: null,
   users: [],
+  selectedUser: null,
   memberships: [],
   orders: [],
   loading: false,
@@ -158,6 +184,18 @@ export const fetchAdminUsers = createAsyncThunk(
     try {
       const res = await adminApi().get("/admin/users");
       return res.data.users as AdminUser[];
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.error || "Failed");
+    }
+  },
+);
+
+export const fetchAdminUserDetail = createAsyncThunk(
+  "admin/userDetail",
+  async (id: number, { rejectWithValue }) => {
+    try {
+      const res = await adminApi().get(`/admin/users/${id}`);
+      return res.data.user as AdminUserDetail;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || "Failed");
     }
@@ -240,6 +278,9 @@ const adminSlice = createSlice({
     clearAdminError(state) {
       state.error = null;
     },
+    clearSelectedUser(state) {
+      state.selectedUser = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -273,6 +314,20 @@ const adminSlice = createSlice({
         state.users = action.payload;
       })
       .addCase(fetchAdminUsers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    builder
+      .addCase(fetchAdminUserDetail.pending, (state) => {
+        state.loading = true;
+        state.selectedUser = null;
+      })
+      .addCase(fetchAdminUserDetail.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedUser = action.payload;
+      })
+      .addCase(fetchAdminUserDetail.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
@@ -345,5 +400,6 @@ const adminSlice = createSlice({
   },
 });
 
-export const { adminLogout, clearAdminError } = adminSlice.actions;
+export const { adminLogout, clearAdminError, clearSelectedUser } =
+  adminSlice.actions;
 export default adminSlice.reducer;

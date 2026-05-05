@@ -132,6 +132,80 @@ router.get(
   },
 );
 
+// ─── GET /api/admin/users/:id ───────────────────────────
+router.get(
+  "/users/:id",
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ error: "Invalid user id" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          age: true,
+          gender: true,
+          weight: true,
+          height: true,
+          goal: true,
+          experience: true,
+          createdAt: true,
+          memberships: {
+            include: { plan: true },
+            orderBy: { createdAt: "desc" },
+          },
+          orders: {
+            include: { items: { include: { product: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      });
+
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      // Enrich memberships with additional plan details
+      const allAdditionalIds = Array.from(
+        new Set(user.memberships.flatMap((m) => m.additionalPlanIds)),
+      );
+      const additionalPlansMap: Record<number, any> = {};
+      if (allAdditionalIds.length > 0) {
+        const additionalPlans = await prisma.membershipPlan.findMany({
+          where: { id: { in: allAdditionalIds } },
+        });
+        additionalPlans.forEach((p) => {
+          additionalPlansMap[p.id] = p;
+        });
+      }
+
+      const enrichedUser = {
+        ...user,
+        memberships: user.memberships.map((m) => ({
+          ...m,
+          additionalPlans: m.additionalPlanIds
+            .map((pid) => additionalPlansMap[pid])
+            .filter(Boolean),
+        })),
+      };
+
+      res.json({ user: enrichedUser });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to fetch user details" });
+    }
+  },
+);
+
 // ─── GET /api/admin/memberships ──────────────────────────
 router.get(
   "/memberships",
