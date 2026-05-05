@@ -3,8 +3,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useAppDispatch } from "@/store/hooks";
-import { clearError } from "@/store/slices/authSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  clearError,
+  openRegistrationModal,
+  closeRegistrationModal,
+} from "@/store/slices/authSlice";
 import { SiteText, getImageUrl } from "@/lib/content";
 import { StepperRegistrationForm } from "@/components/stepper-registration-form";
 
@@ -21,7 +25,7 @@ const DEFAULTS: SiteText = {
 
 export function HeroSection() {
   const dispatch = useAppDispatch();
-  const [open, setOpen] = useState(false);
+  const { registrationModalOpen } = useAppSelector((s) => s.auth);
   const [text, setText] = useState<SiteText>(DEFAULTS);
 
   useEffect(() => {
@@ -32,8 +36,10 @@ export function HeroSection() {
   }, []);
 
   const handleOpenChange = (val: boolean) => {
-    setOpen(val);
-    if (!val) {
+    if (val) {
+      dispatch(openRegistrationModal());
+    } else {
+      dispatch(closeRegistrationModal());
       dispatch(clearError());
     }
   };
@@ -44,7 +50,7 @@ export function HeroSection() {
   return (
     <section className="relative md:min-h-screen flex items-start md:items-center overflow-hidden">
       {/* Blur overlay when dialog is open */}
-      {open && (
+      {registrationModalOpen && (
         <div
           className="fixed inset-0 z-30 backdrop-blur-sm transition-all duration-300"
           style={{ pointerEvents: "none" }}
@@ -107,19 +113,21 @@ export function HeroSection() {
           </p>
           <Button
             className="bg-[#7a1a1a] hover:bg-[#8f1f1f] text-white px-7 py-5 text-sm font-semibold rounded-sm cursor-pointer"
-            onClick={() => setOpen(true)}
+            onClick={() => dispatch(openRegistrationModal())}
           >
             {text.hero_button_text || "Fill Form"}
           </Button>
 
-          <Dialog open={open} onOpenChange={handleOpenChange}>
+          <Dialog open={registrationModalOpen} onOpenChange={handleOpenChange}>
             <DialogContent
               className="max-h-[80vh] w-[94vw] !max-w-[1220px] overflow-y-auto bg-[#08010a] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.75)] sm:!max-w-[1220px] sm:p-6 lg:w-[88vw]"
               style={{
                 border: "2px solid #733EA6",
               }}
             >
-              <StepperRegistrationForm onComplete={() => setOpen(false)} />
+              <StepperRegistrationForm
+                onComplete={() => dispatch(closeRegistrationModal())}
+              />
             </DialogContent>
           </Dialog>
         </div>

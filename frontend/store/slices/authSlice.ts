@@ -17,6 +17,7 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   loginModalOpen: boolean;
+  registrationModalOpen: boolean;
 }
 
 const initialState: AuthState = {
@@ -26,6 +27,7 @@ const initialState: AuthState = {
   loading: false,
   error: null,
   loginModalOpen: false,
+  registrationModalOpen: false,
 };
 
 // ─── Thunks ─────────────────────────────────────────────
@@ -108,6 +110,12 @@ const authSlice = createSlice({
       state.loginModalOpen = false;
       state.error = null;
     },
+    openRegistrationModal(state) {
+      state.registrationModalOpen = true;
+    },
+    closeRegistrationModal(state) {
+      state.registrationModalOpen = false;
+    },
     setToken(state, action: PayloadAction<string>) {
       state.token = action.payload;
     },
@@ -163,6 +171,13 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, setToken, openLoginModal, closeLoginModal } =
-  authSlice.actions;
+export const {
+  logout,
+  clearError,
+  setToken,
+  openLoginModal,
+  closeLoginModal,
+  openRegistrationModal,
+  closeRegistrationModal,
+} = authSlice.actions;
 export default authSlice.reducer;

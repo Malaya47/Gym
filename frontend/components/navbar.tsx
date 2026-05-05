@@ -20,6 +20,7 @@ import {
   clearError,
   openLoginModal,
   closeLoginModal,
+  openRegistrationModal,
 } from "@/store/slices/authSlice";
 
 export function Navbar() {
@@ -266,7 +267,9 @@ export function Navbar() {
                 type="button"
                 className="text-red-400 hover:underline"
                 onClick={() => {
-                  setLoginOpen(false);
+                  dispatch(closeLoginModal());
+                  if (pathname !== "/") router.push("/");
+                  dispatch(openRegistrationModal());
                 }}
               >
                 Fill the registration form on the homepage
