@@ -880,7 +880,12 @@ type MembershipPlan = {
   isActive: boolean;
 };
 
-const PLAN_CATEGORIES = ["MEMBERSHIP", "SHORT_TERM", "ADDITIONAL"] as const;
+type PlanCategoryItem = {
+  id: number;
+  name: string;
+  label: string;
+  order: number;
+};
 
 const emptyPlan: Omit<MembershipPlan, "id"> = {
   name: "",
@@ -895,9 +900,11 @@ const emptyPlan: Omit<MembershipPlan, "id"> = {
 function PlanForm({
   form,
   onChange,
+  categories,
 }: {
   form: Partial<Omit<MembershipPlan, "id">>;
   onChange: (key: string, value: string | number | boolean) => void;
+  categories: PlanCategoryItem[];
 }) {
   return (
     <div className="space-y-3">
@@ -945,13 +952,13 @@ function PlanForm({
       <div>
         <Label className="text-white/50 text-xs mb-1 block">Category</Label>
         <select
-          value={String(form.category ?? "MEMBERSHIP")}
+          value={String(form.category ?? categories[0]?.name ?? "")}
           onChange={(e) => onChange("category", e.target.value)}
           className="w-full bg-[#1a1a1a] border border-white/10 text-white text-sm rounded-md px-3 py-2"
         >
-          {PLAN_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
+          {categories.map((c) => (
+            <option key={c.id} value={c.name}>
+              {c.label}
             </option>
           ))}
         </select>
@@ -987,6 +994,19 @@ function PlanForm({
 }
 
 function MembershipPlansPanel() {
+  // ── plan categories state ──
+  const [categories, setCategories] = useState<PlanCategoryItem[]>([]);
+  const [showCatPanel, setShowCatPanel] = useState(false);
+  const [catAddForm, setCatAddForm] = useState({ label: "" });
+  const [catEditId, setCatEditId] = useState<number | null>(null);
+  const [catEditForm, setCatEditForm] = useState({ label: "" });
+  const [catSaving, setCatSaving] = useState(false);
+  const [catDeleteTargetId, setCatDeleteTargetId] = useState<number | null>(
+    null,
+  );
+  const [catDeleteError, setCatDeleteError] = useState<string | null>(null);
+
+  // ── plans state ──
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<MembershipPlan>>({});
@@ -998,11 +1018,69 @@ function MembershipPlansPanel() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
+    apiFetch("/admin/content/plan-categories")
+      .then((cats: PlanCategoryItem[]) => {
+        setCategories(cats);
+        if (cats.length > 0) {
+          setAddForm((prev) => ({ ...prev, category: cats[0].name }));
+        }
+      })
+      .catch(() => {});
     apiFetch("/admin/content/membership-plans")
       .then(setPlans)
       .catch(() => {});
   }, []);
 
+  // ── category CRUD ──
+  async function handleCatAdd() {
+    if (!catAddForm.label.trim()) return;
+    setCatSaving(true);
+    try {
+      const created = await apiFetch("/admin/content/plan-categories", {
+        method: "POST",
+        body: JSON.stringify({
+          name: catAddForm.label,
+          label: catAddForm.label,
+        }),
+      });
+      setCategories((prev) => [...prev, created]);
+      setCatAddForm({ label: "" });
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to create category");
+    }
+    setCatSaving(false);
+  }
+
+  async function handleCatSave(id: number) {
+    if (!catEditForm.label.trim()) return;
+    setCatSaving(true);
+    try {
+      const updated = await apiFetch(`/admin/content/plan-categories/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ label: catEditForm.label }),
+      });
+      setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      setCatEditId(null);
+    } catch {
+      alert("Failed to save category");
+    }
+    setCatSaving(false);
+  }
+
+  async function handleCatDelete(id: number) {
+    try {
+      await apiFetch(`/admin/content/plan-categories/${id}`, {
+        method: "DELETE",
+      });
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      setCatDeleteTargetId(null);
+    } catch (e: any) {
+      setCatDeleteTargetId(null);
+      setCatDeleteError(e?.message ?? "Failed to delete category");
+    }
+  }
+
+  // ── plans CRUD ──
   async function handleSave(id: number) {
     setSaving(true);
     try {
@@ -1047,19 +1125,14 @@ function MembershipPlansPanel() {
     setSaving(false);
   }
 
-  const grouped = PLAN_CATEGORIES.map((cat) => ({
+  const grouped = categories.map((cat) => ({
     cat,
-    items: plans.filter((p) => p.category === cat),
+    items: plans.filter((p) => p.category === cat.name),
   }));
-
-  const categoryLabel: Record<string, string> = {
-    MEMBERSHIP: "Membership Plans",
-    SHORT_TERM: "Short-Term / Passes",
-    ADDITIONAL: "Additional Packages",
-  };
 
   return (
     <div>
+      {/* Plan delete confirm */}
       <DeleteConfirmDialog
         open={deleteTargetId !== null}
         title="Delete this plan?"
@@ -1069,8 +1142,6 @@ function MembershipPlansPanel() {
         }
         onCancel={() => setDeleteTargetId(null)}
       />
-
-      {/* Error dialog */}
       <AlertDialog open={deleteError !== null}>
         <AlertDialogContent className="bg-[#111] border border-white/10 max-w-sm">
           <AlertDialogHeader>
@@ -1093,6 +1164,147 @@ function MembershipPlansPanel() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Category delete confirm */}
+      <DeleteConfirmDialog
+        open={catDeleteTargetId !== null}
+        title="Delete this category?"
+        description="The category will be removed. You must first reassign or remove all plans in this category."
+        onConfirm={() =>
+          catDeleteTargetId !== null && handleCatDelete(catDeleteTargetId)
+        }
+        onCancel={() => setCatDeleteTargetId(null)}
+      />
+      <AlertDialog open={catDeleteError !== null}>
+        <AlertDialogContent className="bg-[#111] border border-white/10 max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white text-base">
+              Cannot Delete
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50 text-sm">
+              {catDeleteError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              size="sm"
+              onClick={() => setCatDeleteError(null)}
+              className="bg-red-700 hover:bg-red-600 text-white"
+            >
+              OK
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Plan Categories management ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+          <h3 className="text-white font-bold text-lg">Plan Categories</h3>
+          <Button
+            size="sm"
+            onClick={() => setShowCatPanel((v) => !v)}
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/10"
+          >
+            {showCatPanel ? "Close" : "Manage Categories"}
+          </Button>
+        </div>
+
+        {showCatPanel && (
+          <div className="bg-[#0d0d0d] border border-white/10 rounded-lg p-4 space-y-3">
+            <p className="text-white/40 text-xs mb-2">
+              Categories control the tabs on the membership page. The{" "}
+              <span className="font-mono">name</span> is auto-generated from the
+              label and is used as an internal key.
+            </p>
+
+            {/* Existing categories */}
+            <div className="space-y-2">
+              {categories.map((cat) =>
+                catEditId === cat.id ? (
+                  <div key={cat.id} className="flex gap-2 items-center">
+                    <Input
+                      value={catEditForm.label}
+                      onChange={(e) =>
+                        setCatEditForm({ label: e.target.value })
+                      }
+                      placeholder="Category label"
+                      className="bg-[#1a1a1a] border-white/10 text-white text-sm flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={catSaving}
+                      onClick={() => handleCatSave(cat.id)}
+                      className="bg-green-700 hover:bg-green-600 text-white shrink-0"
+                    >
+                      {catSaving ? "…" : <Check size={14} />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCatEditId(null)}
+                      className="border-white/10 text-white/60 shrink-0"
+                    >
+                      <X size={14} />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between bg-[#111] border border-white/5 rounded-lg px-3 py-2"
+                  >
+                    <div>
+                      <span className="text-white text-sm font-medium">
+                        {cat.label}
+                      </span>
+                      <span className="ml-2 text-white/30 text-xs font-mono">
+                        [{cat.name}]
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => {
+                          setCatEditId(cat.id);
+                          setCatEditForm({ label: cat.label });
+                        }}
+                        className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => setCatDeleteTargetId(cat.id)}
+                        className="p-1.5 rounded bg-white/5 hover:bg-red-900/40 text-white/50 hover:text-red-400 transition"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+
+            {/* Add new category */}
+            <div className="flex gap-2 items-center pt-2 border-t border-white/10">
+              <Input
+                value={catAddForm.label}
+                onChange={(e) => setCatAddForm({ label: e.target.value })}
+                placeholder="New category name, e.g. Premium"
+                className="bg-[#1a1a1a] border-white/10 text-white text-sm flex-1"
+                onKeyDown={(e) => e.key === "Enter" && handleCatAdd()}
+              />
+              <Button
+                size="sm"
+                disabled={catSaving || !catAddForm.label.trim()}
+                onClick={handleCatAdd}
+                className="bg-red-700 hover:bg-red-600 text-white shrink-0"
+              >
+                <Plus size={14} className="mr-1" /> Add
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Plans ── */}
       <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
         <SectionHeader title="Membership Plans" />
         <Button
@@ -1110,6 +1322,7 @@ function MembershipPlansPanel() {
           <PlanForm
             form={addForm}
             onChange={(k, v) => setAddForm((prev) => ({ ...prev, [k]: v }))}
+            categories={categories}
           />
           <div className="flex gap-2 justify-end">
             <Button
@@ -1136,9 +1349,9 @@ function MembershipPlansPanel() {
       )}
 
       {grouped.map(({ cat, items }) => (
-        <div key={cat} className="mb-8">
+        <div key={cat.id} className="mb-8">
           <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-3">
-            [{categoryLabel[cat]}]
+            [{cat.label}]
           </p>
 
           {items.length === 0 && (
@@ -1157,6 +1370,7 @@ function MembershipPlansPanel() {
                     onChange={(k, v) =>
                       setEditForm((prev) => ({ ...prev, [k]: v }))
                     }
+                    categories={categories}
                   />
                   <div className="flex gap-2 justify-end">
                     <Button
@@ -1400,7 +1614,8 @@ const REGISTRATION_DEFAULTS = {
   agreement_text:
     "Membership starts from the selected start date. The selected plan and registration fee are payable according to gym policy.",
   agreement_checkbox_1: "I confirm my personal details are accurate.",
-  agreement_checkbox_2: "I understand the membership plan is submitted for approval.",
+  agreement_checkbox_2:
+    "I understand the membership plan is submitted for approval.",
   terms_text:
     "Please review the gym terms, house rules, health responsibility, cancellation policy, and payment terms before signing.",
   terms_checkbox_1: "I have read and agree to the membership terms.",

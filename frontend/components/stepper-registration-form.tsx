@@ -19,6 +19,13 @@ import { Check, Eraser, Loader2 } from "lucide-react";
 
 type Step = 0 | 1 | 2 | 3;
 
+type PlanCategoryItem = {
+  id: number;
+  name: string;
+  label: string;
+  order: number;
+};
+
 type RegistrationContent = {
   registration_fee?: string;
   registration_currency?: string;
@@ -97,6 +104,7 @@ export function StepperRegistrationForm({
   >([]);
   const [activePlanCategory, setActivePlanCategory] =
     useState<string>("MEMBERSHIP");
+  const [planCategories, setPlanCategories] = useState<PlanCategoryItem[]>([]);
   const [content, setContent] =
     useState<Required<RegistrationContent>>(DEFAULT_CONTENT);
   const [agreementChecks, setAgreementChecks] = useState([false, false]);
@@ -113,6 +121,10 @@ export function StepperRegistrationForm({
     api
       .get("/content/text/registration")
       .then((res) => setContent({ ...DEFAULT_CONTENT, ...res.data }))
+      .catch(() => {});
+    api
+      .get("/content/plan-categories")
+      .then((res) => setPlanCategories(res.data))
       .catch(() => {});
     return () => {
       dispatch(clearError());
@@ -176,26 +188,15 @@ export function StepperRegistrationForm({
 
   const isBusy = authLoading || purchaseLoading;
 
-  // All categories in one tab bar
-  const categoryLabels: Record<string, string> = {
-    MEMBERSHIP: "Annual",
-    SHORT_TERM: "Short Term",
-    ADDITIONAL: "Additional",
-  };
+  // All categories in one tab bar — driven by planCategories so empty ones still show
   const groupedPlans = useMemo(() => {
-    const categories = Array.from(new Set(plans.map((p) => p.category)));
-    return categories.map((cat) => ({
-      key: cat,
-      label: categoryLabels[cat] || cat,
-      title:
-        cat === "MEMBERSHIP"
-          ? "Membership Plans"
-          : cat === "SHORT_TERM"
-            ? "Short-Term Plans"
-            : "Additional Plans",
-      items: plans.filter((p) => p.category === cat),
+    return planCategories.map((cat) => ({
+      key: cat.name,
+      label: cat.label,
+      title: cat.label,
+      items: plans.filter((p) => p.category === cat.name),
     }));
-  }, [plans]);
+  }, [plans, planCategories]);
   const selectedPlanGroup =
     groupedPlans.find((group) => group.key === activePlanCategory) ??
     groupedPlans[0];

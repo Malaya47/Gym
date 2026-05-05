@@ -1382,4 +1382,102 @@ router.delete(
   },
 );
 
+// ─── PLAN CATEGORIES (dynamic, admin-managed) ──────────────────────────────
+
+router.get(
+  "/content/plan-categories",
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const rows = await prisma.planCategoryItem.findMany({
+        orderBy: { order: "asc" },
+      });
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: "Failed" });
+    }
+  },
+);
+
+router.post(
+  "/content/plan-categories",
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { name, label, order } = req.body;
+      if (!name || !label) {
+        res.status(400).json({ error: "name and label are required" });
+        return;
+      }
+      const row = await prisma.planCategoryItem.create({
+        data: {
+          name: name.trim().toUpperCase().replace(/\s+/g, "_"),
+          label: label.trim(),
+          order: order !== undefined ? Number(order) : 0,
+        },
+      });
+      res.json(row);
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        res
+          .status(409)
+          .json({ error: "A category with that name already exists" });
+        return;
+      }
+      res.status(500).json({ error: "Failed" });
+    }
+  },
+);
+
+router.put(
+  "/content/plan-categories/:id",
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { label, order } = req.body;
+      const row = await prisma.planCategoryItem.update({
+        where: { id: Number(req.params.id) },
+        data: {
+          ...(label !== undefined ? { label: label.trim() } : {}),
+          ...(order !== undefined ? { order: Number(order) } : {}),
+        },
+      });
+      res.json(row);
+    } catch (err) {
+      res.status(500).json({ error: "Failed" });
+    }
+  },
+);
+
+router.delete(
+  "/content/plan-categories/:id",
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const id = Number(req.params.id);
+      // Prevent deleting categories that have plans attached
+      const category = await prisma.planCategoryItem.findUnique({
+        where: { id },
+      });
+      if (!category) {
+        res.status(404).json({ error: "Category not found" });
+        return;
+      }
+      const planCount = await prisma.membershipPlan.count({
+        where: { category: category.name },
+      });
+      if (planCount > 0) {
+        res.status(409).json({
+          error: `Cannot delete — ${planCount} plan(s) use this category. Reassign them first.`,
+        });
+        return;
+      }
+      await prisma.planCategoryItem.delete({ where: { id } });
+      res.json({ message: "Deleted" });
+    } catch (err) {
+      res.status(500).json({ error: "Failed" });
+    }
+  },
+);
+
 export default router;

@@ -23,11 +23,7 @@ enum ApprovalStatus {
   REJECTED
 }
 
-enum PlanCategory {
-  MEMBERSHIP
-  SHORT_TERM
-  ADDITIONAL
-}
+
 
 // ─── Admin ─────────────────────────────────────────────
 model Admin {
@@ -67,7 +63,7 @@ model MembershipPlan {
   price     Float
   currency  String       @default("CHF")
   features  String[]     // stored as array
-  category  PlanCategory @default(MEMBERSHIP)
+  category  String       @default("MEMBERSHIP")
   isActive  Boolean      @default(true)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -96,6 +92,16 @@ model MembershipPurchase {
   notes              String?        // admin can add notes
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+}
+
+// ─── CMS: Plan Categories ────────────────────────────────
+model PlanCategoryItem {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique     // stored value in MembershipPlan.category
+  label     String               // display label
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── CMS: Site Content (key-value text/headings) ───────

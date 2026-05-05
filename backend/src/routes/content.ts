@@ -288,4 +288,21 @@ router.get("/faqs", async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
+// ─── GET /api/content/plan-categories ──────────────────
+router.get(
+  "/plan-categories",
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const categories = await prisma.planCategoryItem.findMany({
+        orderBy: { order: "asc" },
+        select: { id: true, name: true, label: true, order: true },
+      });
+      res.json(categories);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to fetch plan categories" });
+    }
+  },
+);
+
 export default router;
