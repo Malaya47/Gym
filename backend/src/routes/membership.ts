@@ -11,6 +11,22 @@ function parseStartDate(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function computeEndDate(startDate: Date, duration: string): Date | null {
+  const match = duration
+    .toLowerCase()
+    .trim()
+    .match(/^(\d+)\s*(month|year|day|week)/);
+  if (!match) return null;
+  const num = parseInt(match[1]);
+  const unit = match[2];
+  const end = new Date(startDate);
+  if (unit === "month") end.setMonth(end.getMonth() + num);
+  else if (unit === "year") end.setFullYear(end.getFullYear() + num);
+  else if (unit === "day") end.setDate(end.getDate() + num);
+  else if (unit === "week") end.setDate(end.getDate() + num * 7);
+  return end;
+}
+
 // ─── GET /api/membership/plans ──────────────────────────
 // Public – list all active membership plans
 router.get("/plans", async (_req, res: Response): Promise<void> => {
@@ -70,11 +86,9 @@ router.post(
           },
         });
         if (additionalPlans.length !== additionalIds.length) {
-          res
-            .status(400)
-            .json({
-              error: "One or more additional plans are invalid or inactive",
-            });
+          res.status(400).json({
+            error: "One or more additional plans are invalid or inactive",
+          });
           return;
         }
       }
@@ -100,6 +114,40 @@ router.post(
         !Array.isArray(registrationDetails)
           ? (registrationDetails as Record<string, unknown>)
           : {};
+
+      // Validate startDate — required and must not be in the past
+      const parsedStartDate = parseStartDate(details.startDate);
+      if (!parsedStartDate) {
+        res.status(400).json({ error: "A valid start date is required." });
+        return;
+      }
+      const todayMidnight = new Date();
+      todayMidnight.setHours(0, 0, 0, 0);
+      if (parsedStartDate < todayMidnight) {
+        res.status(400).json({ error: "Start date cannot be in the past." });
+        return;
+      }
+
+      // Validate endDate is consistent with plan duration (if provided)
+      const endDateStr =
+        typeof details.endDate === "string" ? details.endDate : null;
+      if (endDateStr) {
+        const parsedEndDate = new Date(endDateStr);
+        if (!Number.isNaN(parsedEndDate.getTime())) {
+          const expectedEnd = computeEndDate(parsedStartDate, plan.duration);
+          if (expectedEnd) {
+            const diffDays =
+              Math.abs(parsedEndDate.getTime() - expectedEnd.getTime()) /
+              (1000 * 60 * 60 * 24);
+            if (diffDays > 3) {
+              res.status(400).json({
+                error: "End date does not match the selected plan duration.",
+              });
+              return;
+            }
+          }
+        }
+      }
 
       const resolvedRegistrationFee =
         registrationFee !== undefined ? Number(registrationFee) : 0;
@@ -131,7 +179,10 @@ router.post(
           totalAmount: Number.isFinite(resolvedTotalAmount)
             ? resolvedTotalAmount
             : plan.price + additionalTotal,
-          startDate: parseStartDate(details.startDate),
+          startDate: parsedStartDate,
+          endDate: endDateStr
+            ? new Date(endDateStr)
+            : computeEndDate(parsedStartDate, plan.duration),
           emergencyContact:
             typeof details.emergencyContact === "string"
               ? details.emergencyContact
@@ -148,6 +199,11 @@ router.post(
                 ? resolvedRegistrationFee
                 : 0
             }`,
+            details.startDate && endDateStr
+              ? `Membership period: ${details.startDate} to ${endDateStr}`
+              : details.startDate
+                ? `Start date: ${details.startDate}`
+                : null,
             additionalNotes,
             `Total submitted: ${plan.currency} ${
               Number.isFinite(resolvedTotalAmount)

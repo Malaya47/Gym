@@ -82,6 +82,38 @@ function planTitle(plan: MembershipPlan) {
   return plan.name || plan.duration;
 }
 
+function parseDurationToEndDate(
+  startDateStr: string,
+  duration: string,
+): string {
+  if (!startDateStr || !duration) return "";
+  const start = new Date(startDateStr + "T00:00:00");
+  if (Number.isNaN(start.getTime())) return "";
+  const match = duration
+    .toLowerCase()
+    .trim()
+    .match(/^(\d+)\s*(month|year|day|week)/);
+  if (!match) return "";
+  const num = parseInt(match[1]);
+  const unit = match[2];
+  const end = new Date(start);
+  if (unit === "month") end.setMonth(end.getMonth() + num);
+  else if (unit === "year") end.setFullYear(end.getFullYear() + num);
+  else if (unit === "day") end.setDate(end.getDate() + num);
+  else if (unit === "week") end.setDate(end.getDate() + num * 7);
+  return end.toISOString().slice(0, 10);
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export function StepperRegistrationForm({
   onComplete,
 }: {
@@ -116,6 +148,8 @@ export function StepperRegistrationForm({
   const [localError, setLocalError] = useState("");
   const formShellRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [membershipStartDate, setMembershipStartDate] = useState("");
+  const [membershipEndDate, setMembershipEndDate] = useState("");
 
   useEffect(() => {
     dispatch(fetchPlans());
@@ -172,6 +206,17 @@ export function StepperRegistrationForm({
 
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
   const registrationFee = Number(content.registration_fee) || 0;
+
+  // Auto-calculate end date when plan or start date changes
+  useEffect(() => {
+    if (membershipStartDate && selectedPlan) {
+      setMembershipEndDate(
+        parseDurationToEndDate(membershipStartDate, selectedPlan.duration),
+      );
+    } else {
+      setMembershipEndDate("");
+    }
+  }, [membershipStartDate, selectedPlan]);
   const currency = selectedPlan?.currency || content.registration_currency;
 
   const additionalPlans = useMemo(
@@ -249,9 +294,15 @@ export function StepperRegistrationForm({
         return false;
       }
     }
-    if (current === 1 && !selectedPlan) {
-      setLocalError("Please select a membership plan.");
-      return false;
+    if (current === 1) {
+      if (!selectedPlan) {
+        setLocalError("Please select a membership plan.");
+        return false;
+      }
+      if (!membershipStartDate) {
+        setLocalError("Please select a start date for your membership.");
+        return false;
+      }
     }
     if (current === 2 && agreementChecks.some((checked) => !checked)) {
       setLocalError("Please accept both agreement confirmations.");
@@ -345,7 +396,8 @@ export function StepperRegistrationForm({
         totalAmount: total,
         signatureDataUrl,
         registrationDetails: {
-          startDate: form.startDate,
+          startDate: membershipStartDate,
+          endDate: membershipEndDate,
           emergencyContact: form.emergencyContact,
           address: form.address,
           acceptedAgreement: agreementChecks.every(Boolean),
@@ -593,12 +645,18 @@ export function StepperRegistrationForm({
                   <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     {selectedPlanGroup.items.map((plan) => {
                       const selected = selectedPlanId === plan.id;
+                      const today = new Date().toISOString().slice(0, 10);
                       return (
-                        <button
-                          type="button"
+                        <div
                           key={plan.id}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => setSelectedPlanId(plan.id)}
-                          className={`rounded-lg border p-3 text-left transition w-full ${
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ")
+                              setSelectedPlanId(plan.id);
+                          }}
+                          className={`rounded-lg border p-3 text-left transition w-full cursor-pointer ${
                             selected
                               ? "border-red-500 bg-red-950/40 shadow-[0_0_24px_rgba(185,28,28,0.28)]"
                               : "border-white/10 bg-white/5 hover:border-white/30"
@@ -621,7 +679,44 @@ export function StepperRegistrationForm({
                               </li>
                             ))}
                           </ul>
-                        </button>
+                          {selected && (
+                            <div
+                              className="mt-4 border-t border-white/10 pt-3 space-y-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div>
+                                <p className="mb-1 text-xs text-white/50">
+                                  Start Date *
+                                </p>
+                                <input
+                                  type="date"
+                                  min={today}
+                                  value={membershipStartDate}
+                                  onChange={(e) =>
+                                    setMembershipStartDate(e.target.value)
+                                  }
+                                  className="h-8 w-full rounded-md border border-white/10 bg-black/40 px-3 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-red-700/50"
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-1 text-xs text-white/50">
+                                  End Date
+                                </p>
+                                <p
+                                  className={`h-8 flex items-center rounded-md border border-white/10 bg-black/40 px-3 text-sm ${
+                                    membershipEndDate
+                                      ? "text-white/80"
+                                      : "text-white/30 italic"
+                                  }`}
+                                >
+                                  {membershipEndDate
+                                    ? formatDate(membershipEndDate)
+                                    : "Pick a start date"}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
