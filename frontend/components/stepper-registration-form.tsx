@@ -428,6 +428,10 @@ export function StepperRegistrationForm({
     canvas.setPointerCapture(event.pointerId);
     const { x, y } = point(event);
     drawingRef.current = true;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(x, y);
   }
@@ -1069,61 +1073,25 @@ export function StepperRegistrationForm({
             <div className="rounded-lg bg-white/5 p-4">
               {signatureDataUrl ? (
                 <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <Label className="text-white/70">
-                      Your Signature{" "}
-                      <span className="text-green-400 text-xs">
-                        (signed via contract)
-                      </span>
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSignatureDataUrl("");
-                        setContractMemberSig("");
-                        setAgreementChecks((prev) =>
-                          prev.map((item, i) => (i === 0 ? false : item)),
-                        );
-                      }}
-                      className="h-8 gap-2 text-white/60 hover:text-white"
-                    >
-                      <Eraser size={14} /> Re-sign
-                    </Button>
-                  </div>
-                  <div className="h-28 w-full rounded-md border border-white/10 bg-[#111] overflow-hidden">
+                  <Label className="text-white/70 mb-2 block">
+                    Your Signature{" "}
+                    <span className="text-green-400 text-xs">
+                      (signed via contract)
+                    </span>
+                  </Label>
+                  <div className="h-28 w-full rounded-md border border-white/10 bg-[#111] overflow-hidden flex items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={signatureDataUrl}
                       alt="Your signature"
                       className="h-full w-full object-contain"
+                      style={{ filter: "invert(1)" }}
                     />
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <Label className="text-white/70">Draw Signature</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearSignature}
-                      className="h-8 gap-2 text-white/60 hover:text-white"
-                    >
-                      <Eraser size={14} /> Clear
-                    </Button>
-                  </div>
-                  <canvas
-                    ref={canvasRef}
-                    onPointerDown={beginDraw}
-                    onPointerMove={draw}
-                    onPointerUp={endDraw}
-                    onPointerLeave={endDraw}
-                    className="h-28 w-full touch-none rounded-md border border-white/10 bg-[#111]"
-                    style={{ maxWidth: "100%" }}
-                  />
+                <div className="h-28 w-full rounded-md border border-white/10 bg-[#111] flex items-center justify-center text-white/30 text-sm">
+                  No signature found — please complete the contract step.
                 </div>
               )}
               <div className="mt-4 rounded-md bg-white/10 p-3">
