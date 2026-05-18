@@ -273,6 +273,16 @@ export function AdminUserDetail({ userId, onBack }: Props) {
                           </p>
                         </div>
                       )}
+                      {m.endDate && (
+                        <div>
+                          <p className="text-white/30">End Date</p>
+                          <p
+                            className={`mt-0.5 font-medium ${new Date(m.endDate) < new Date() ? "text-red-400" : "text-green-400"}`}
+                          >
+                            {new Date(m.endDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
                       {(m.registrationDetails as Record<string, unknown>)
                         ?.contractNumber && (
                         <div>

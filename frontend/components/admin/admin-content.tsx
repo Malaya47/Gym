@@ -673,6 +673,7 @@ function CrudPanel<T extends { id: number }>({
     return (
       <Input
         type={col.type === "number" ? "number" : "text"}
+        min={col.type === "number" ? 0 : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="bg-[#1a1a1a] border-white/10 text-white text-sm"
@@ -935,6 +936,7 @@ function PlanForm({
           </Label>
           <Input
             type="number"
+            min={0}
             value={String(form.price ?? "")}
             onChange={(e) => onChange("price", Number(e.target.value))}
             className="bg-[#1a1a1a] border-white/10 text-white text-sm"
@@ -1692,6 +1694,7 @@ function RegistrationSettingsPanel() {
         ) : (
           <Input
             type={type}
+            min={type === "number" ? 0 : undefined}
             value={form[key]}
             onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
             className="bg-[#1a1a1a] border-white/10 text-white text-sm"

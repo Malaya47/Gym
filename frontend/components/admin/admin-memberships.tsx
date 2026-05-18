@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   fetchAdminMemberships,
   updateMembershipStatus,
 } from "@/store/slices/adminSlice";
-import { CreditCard, Check, X } from "lucide-react";
+import {
+  CreditCard,
+  Check,
+  X,
+  Filter,
+  Search,
+  ChevronDown,
+} from "lucide-react";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"] as const;
+const FREQUENCY_FILTERS = ["ALL", "MONTHLY", "QUARTERLY", "ANNUALLY"] as const;
 
 const statusBadge = (status: string) => {
   switch (status) {
@@ -31,11 +39,61 @@ export function AdminMemberships() {
   const [filter, setFilter] = useState<
     "ALL" | "PENDING" | "APPROVED" | "REJECTED"
   >("ALL");
+  const [frequencyFilter, setFrequencyFilter] = useState<
+    "ALL" | "MONTHLY" | "QUARTERLY" | "ANNUALLY"
+  >("ALL");
+  const [planSearch, setPlanSearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [startDateFrom, setStartDateFrom] = useState("");
+  const [startDateTo, setStartDateTo] = useState("");
   const [notesMap, setNotesMap] = useState<Record<number, string>>({});
 
   useEffect(() => {
     dispatch(fetchAdminMemberships(filter === "ALL" ? undefined : filter));
   }, [dispatch, filter]);
+
+  const planOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return memberships
+      .map((m) => m.plan.name)
+      .filter((name) => {
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      })
+      .sort();
+  }, [memberships]);
+
+  const filtered = useMemo(() => {
+    return memberships.filter((m) => {
+      if (
+        frequencyFilter !== "ALL" &&
+        m.paymentFrequency?.toUpperCase() !== frequencyFilter
+      )
+        return false;
+      if (planSearch && m.plan.name !== planSearch) return false;
+      if (userSearch.trim()) {
+        const fullName = `${m.user.firstName} ${m.user.lastName}`.toLowerCase();
+        const email = m.user.email.toLowerCase();
+        const q = userSearch.trim().toLowerCase();
+        if (!fullName.includes(q) && !email.includes(q)) return false;
+      }
+      if (startDateFrom && m.startDate) {
+        if (new Date(m.startDate) < new Date(startDateFrom)) return false;
+      }
+      if (startDateTo && m.startDate) {
+        if (new Date(m.startDate) > new Date(startDateTo)) return false;
+      }
+      return true;
+    });
+  }, [
+    memberships,
+    frequencyFilter,
+    planSearch,
+    userSearch,
+    startDateFrom,
+    startDateTo,
+  ]);
 
   const handleAction = (id: number, status: "APPROVED" | "REJECTED") => {
     dispatch(
@@ -44,38 +102,192 @@ export function AdminMemberships() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <CreditCard size={20} className="text-green-400" />
-          Membership Purchases ({memberships.length})
+          Membership Purchases
+          <span className="text-sm font-normal text-white/40">
+            ({filtered.length})
+          </span>
         </h2>
-        <div className="flex gap-2">
-          {STATUS_FILTERS.map((f) => (
+      </div>
+
+      {/* Filter panel */}
+      <div className="bg-[#0e0e0e] border border-white/8 rounded-2xl overflow-hidden">
+        {/* Filter header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
+          <div className="flex items-center gap-2 text-white/50 text-xs font-medium uppercase tracking-widest">
+            <Filter size={12} />
+            Filters
+          </div>
+          {(filter !== "ALL" ||
+            frequencyFilter !== "ALL" ||
+            planSearch ||
+            userSearch ||
+            startDateFrom ||
+            startDateTo) && (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                filter === f
-                  ? "bg-red-600/20 text-red-400 border-red-600/30"
-                  : "bg-white/5 text-white/40 border-white/10 hover:text-white"
-              }`}
+              onClick={() => {
+                setFilter("ALL");
+                setFrequencyFilter("ALL");
+                setPlanSearch("");
+                setUserSearch("");
+                setStartDateFrom("");
+                setStartDateTo("");
+              }}
+              className="text-xs text-red-400/70 hover:text-red-400 transition-colors flex items-center gap-1"
             >
-              {f}
+              <X size={11} /> Clear all
             </button>
-          ))}
+          )}
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Row 1: Status + Frequency */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Status */}
+            <div className="space-y-2">
+              <p className="text-[10px] text-white/30 uppercase tracking-widest font-medium">
+                Status
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {STATUS_FILTERS.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
+                      filter === f
+                        ? f === "APPROVED"
+                          ? "bg-green-500/15 text-green-400 border-green-500/30"
+                          : f === "REJECTED"
+                            ? "bg-red-500/15 text-red-400 border-red-500/30"
+                            : f === "PENDING"
+                              ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                              : "bg-white/10 text-white border-white/20"
+                        : "bg-transparent text-white/35 border-white/8 hover:border-white/20 hover:text-white/70"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Frequency */}
+            <div className="space-y-2">
+              <p className="text-[10px] text-white/30 uppercase tracking-widest font-medium">
+                Payment Frequency
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {FREQUENCY_FILTERS.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFrequencyFilter(f)}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
+                      frequencyFilter === f
+                        ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                        : "bg-transparent text-white/35 border-white/8 hover:border-white/20 hover:text-white/70"
+                    }`}
+                  >
+                    {f === "ALL"
+                      ? "All"
+                      : f.charAt(0) + f.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/5" />
+
+          {/* Row 2: Search + Plan + Dates */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* User search */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">
+                Member
+              </label>
+              <div className="relative">
+                <Search
+                  size={12}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  placeholder="Name or email…"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full bg-[#161616] border border-white/8 text-white text-xs rounded-xl pl-8 pr-3 py-2 placeholder:text-white/20 focus:outline-none focus:border-white/25 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Plan dropdown */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">
+                Plan
+              </label>
+              <div className="relative">
+                <select
+                  value={planSearch}
+                  onChange={(e) => setPlanSearch(e.target.value)}
+                  className="w-full appearance-none bg-[#161616] border border-white/8 text-white text-xs rounded-xl px-3 pr-8 py-2 focus:outline-none focus:border-white/25 transition-colors scheme-dark"
+                >
+                  <option value="">All plans</option>
+                  {planOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={12}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
+                />
+              </div>
+            </div>
+
+            {/* Start date from */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">
+                Start date from
+              </label>
+              <input
+                type="date"
+                value={startDateFrom}
+                onChange={(e) => setStartDateFrom(e.target.value)}
+                className="w-full bg-[#161616] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-white/25 transition-colors scheme-dark"
+              />
+            </div>
+
+            {/* Start date to */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">
+                Start date to
+              </label>
+              <input
+                type="date"
+                value={startDateTo}
+                onChange={(e) => setStartDateTo(e.target.value)}
+                className="w-full bg-[#161616] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-white/25 transition-colors scheme-dark"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       {loading ? (
         <div className="text-white/40 text-sm">Loading...</div>
-      ) : memberships.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="bg-[#111] border border-white/5 rounded-xl p-10 text-center text-white/30">
           No membership records found.
         </div>
       ) : (
         <div className="space-y-3">
-          {memberships.map((m) => (
+          {filtered.map((m) => (
             <div
               key={m.id}
               className="bg-[#111] border border-white/5 rounded-xl p-5 flex flex-col sm:flex-row sm:items-start gap-4"
@@ -147,6 +359,16 @@ export function AdminMemberships() {
                   {m.startDate && (
                     <span>
                       Start date: {new Date(m.startDate).toLocaleDateString()}
+                    </span>
+                  )}
+                  {m.endDate && (
+                    <span>
+                      End date:{" "}
+                      <span
+                        className={`font-medium ${new Date(m.endDate) < new Date() ? "text-red-400" : "text-green-400"}`}
+                      >
+                        {new Date(m.endDate).toLocaleDateString()}
+                      </span>
                     </span>
                   )}
                   {m.emergencyContact && (

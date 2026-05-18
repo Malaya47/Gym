@@ -35,6 +35,7 @@ export interface AdminMembership {
   registrationFee?: number;
   totalAmount?: number;
   startDate?: string;
+  endDate?: string;
   emergencyContact?: string;
   address?: string;
   acceptedAgreement?: boolean;
