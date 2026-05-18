@@ -123,6 +123,15 @@ export function AdminMemberships() {
                     Total: {m.plan.currency}{" "}
                     {(m.totalAmount ?? m.plan.price).toFixed(2)}
                   </span>
+                  {m.paymentFrequency && (
+                    <span>
+                      Payment:{" "}
+                      <span className="text-white/70 font-medium capitalize">
+                        {m.paymentFrequency.charAt(0) +
+                          m.paymentFrequency.slice(1).toLowerCase()}
+                      </span>
+                    </span>
+                  )}
                   {m.startDate && (
                     <span>
                       Start date: {new Date(m.startDate).toLocaleDateString()}

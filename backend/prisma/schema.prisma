@@ -90,6 +90,7 @@ model MembershipPurchase {
   acceptedAgreement  Boolean        @default(false)
   acceptedTerms      Boolean        @default(false)
   signatureDataUrl   String?        @db.Text
+  paymentFrequency   String         @default("MONTHLY")
   registrationDetails Json?
   notes              String?        // admin can add notes
   createdAt          DateTime       @default(now())

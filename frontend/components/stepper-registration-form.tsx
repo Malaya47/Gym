@@ -29,6 +29,8 @@ type PlanCategoryItem = {
 type RegistrationContent = {
   registration_fee?: string;
   registration_currency?: string;
+  discount_amount?: string;
+  discount_label?: string;
   agreement_text?: string;
   agreement_checkbox_1?: string;
   agreement_checkbox_2?: string;
@@ -43,6 +45,8 @@ const STEPS = ["Personal Details", "Plans", "Agreement", "Terms & Conditions"];
 const DEFAULT_CONTENT: Required<RegistrationContent> = {
   registration_fee: "99",
   registration_currency: "CHF",
+  discount_amount: "0",
+  discount_label: "Discount",
   agreement_text:
     "Membership starts from the selected start date. The selected plan and registration fee are payable according to gym policy.",
   agreement_checkbox_1: "I confirm my personal details are accurate.",
@@ -150,6 +154,9 @@ export function StepperRegistrationForm({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [membershipStartDate, setMembershipStartDate] = useState("");
   const [membershipEndDate, setMembershipEndDate] = useState("");
+  const [paymentFrequency, setPaymentFrequency] = useState<
+    "MONTHLY" | "QUARTERLY" | "YEARLY"
+  >("MONTHLY");
 
   useEffect(() => {
     dispatch(fetchPlans());
@@ -206,6 +213,8 @@ export function StepperRegistrationForm({
 
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
   const registrationFee = Number(content.registration_fee) || 0;
+  const discountAmount = Math.max(0, Number(content.discount_amount) || 0);
+  const discountLabel = content.discount_label || "Discount";
 
   // Auto-calculate end date when plan or start date changes
   useEffect(() => {
@@ -230,7 +239,9 @@ export function StepperRegistrationForm({
     (sum, p) => sum + p.price,
     0,
   );
-  const total = (selectedPlan?.price ?? 0) + additionalTotal + registrationFee;
+  const subtotal =
+    (selectedPlan?.price ?? 0) + additionalTotal + registrationFee;
+  const total = Math.max(0, subtotal - discountAmount);
 
   const isBusy = authLoading || purchaseLoading;
 
@@ -395,6 +406,7 @@ export function StepperRegistrationForm({
         registrationFee,
         totalAmount: total,
         signatureDataUrl,
+        paymentFrequency,
         registrationDetails: {
           startDate: membershipStartDate,
           endDate: membershipEndDate,
@@ -730,8 +742,57 @@ export function StepperRegistrationForm({
               plan={selectedPlan}
               additionalPlans={selectedAdditionalPlans}
               registrationFee={registrationFee}
+              discountAmount={discountAmount}
+              discountLabel={discountLabel}
               total={total}
             />
+            {/* Payment Frequency Selector */}
+            <div className="rounded-lg border border-white/10 bg-[#120817] p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/50">
+                Payment Frequency
+              </p>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    { value: "MONTHLY", label: "Monthly" },
+                    { value: "QUARTERLY", label: "Quarterly" },
+                    { value: "YEARLY", label: "Yearly" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <label
+                    key={value}
+                    className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 transition ${
+                      paymentFrequency === value
+                        ? "border-red-500 bg-red-950/40"
+                        : "border-white/10 bg-white/5 hover:border-white/25"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentFrequency"
+                      value={value}
+                      checked={paymentFrequency === value}
+                      onChange={() => setPaymentFrequency(value)}
+                      className="sr-only"
+                    />
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                        paymentFrequency === value
+                          ? "border-red-500 bg-red-600"
+                          : "border-white/30"
+                      }`}
+                    >
+                      {paymentFrequency === value && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                      )}
+                    </span>
+                    <span className="text-sm font-medium text-white">
+                      {label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="flex gap-3 justify-between">
               <Button
                 type="button"
@@ -791,6 +852,8 @@ export function StepperRegistrationForm({
               plan={selectedPlan}
               additionalPlans={selectedAdditionalPlans}
               registrationFee={registrationFee}
+              discountAmount={discountAmount}
+              discountLabel={discountLabel}
               total={total}
             />
           </div>
@@ -866,6 +929,8 @@ export function StepperRegistrationForm({
               plan={selectedPlan}
               additionalPlans={selectedAdditionalPlans}
               registrationFee={registrationFee}
+              discountAmount={discountAmount}
+              discountLabel={discountLabel}
               total={total}
             />
           </div>
@@ -967,12 +1032,16 @@ function TotalBox({
   plan,
   additionalPlans,
   registrationFee,
+  discountAmount,
+  discountLabel,
   total,
 }: {
   currency: string;
   plan: MembershipPlan | null;
   additionalPlans: MembershipPlan[];
   registrationFee: number;
+  discountAmount: number;
+  discountLabel: string;
   total: number;
 }) {
   return (
@@ -994,6 +1063,12 @@ function TotalBox({
         <span>Fixed registration fee</span>
         <span>{money(currency, registrationFee)}</span>
       </div>
+      {discountAmount > 0 && plan && (
+        <div className="mt-2 flex items-center justify-between gap-4 text-sm text-green-400">
+          <span>{discountLabel}</span>
+          <span>- {money(currency, discountAmount)}</span>
+        </div>
+      )}
       <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3 text-lg font-bold">
         <span>Total</span>
         <span>{money(currency, total)}</span>

@@ -40,6 +40,7 @@ export interface AdminMembership {
   acceptedAgreement?: boolean;
   acceptedTerms?: boolean;
   signatureDataUrl?: string;
+  paymentFrequency?: string;
   registrationDetails?: Record<string, unknown>;
   notes?: string;
   createdAt: string;

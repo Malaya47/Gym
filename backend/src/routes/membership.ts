@@ -56,6 +56,7 @@ router.post(
         totalAmount,
         signatureDataUrl,
         registrationDetails,
+        paymentFrequency,
       } = req.body;
 
       if (!planId) {
@@ -192,6 +193,11 @@ router.post(
           acceptedTerms: details.acceptedTerms === true,
           signatureDataUrl:
             typeof signatureDataUrl === "string" ? signatureDataUrl : null,
+          paymentFrequency:
+            typeof paymentFrequency === "string" &&
+            ["MONTHLY", "QUARTERLY", "YEARLY"].includes(paymentFrequency)
+              ? paymentFrequency
+              : "MONTHLY",
           registrationDetails: details as Prisma.InputJsonValue,
           notes: [
             `Registration fee: ${plan.currency} ${

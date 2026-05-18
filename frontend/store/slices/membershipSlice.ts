@@ -18,6 +18,7 @@ export interface MembershipPurchase {
   additionalPlanIds: number[];
   additionalPlans?: MembershipPlan[];
   status: "PENDING" | "APPROVED" | "REJECTED";
+  paymentFrequency?: "MONTHLY" | "QUARTERLY" | "YEARLY";
   notes?: string;
   createdAt: string;
 }
@@ -65,6 +66,7 @@ export const purchaseMembership = createAsyncThunk(
           registrationFee?: number;
           totalAmount?: number;
           signatureDataUrl?: string;
+          paymentFrequency?: "MONTHLY" | "QUARTERLY" | "YEARLY";
           registrationDetails?: Record<string, unknown>;
         },
     { rejectWithValue },

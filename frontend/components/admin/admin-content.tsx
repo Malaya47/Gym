@@ -1611,6 +1611,8 @@ function FooterPanel() {
 const REGISTRATION_DEFAULTS = {
   registration_fee: "99",
   registration_currency: "CHF",
+  discount_amount: "0",
+  discount_label: "Discount",
   agreement_text:
     "Membership starts from the selected start date. The selected plan and registration fee are payable according to gym policy.",
   agreement_checkbox_1: "I confirm my personal details are accurate.",
@@ -1706,6 +1708,14 @@ function RegistrationSettingsPanel() {
         <div className="grid grid-cols-2 gap-3">
           {field("registration_fee", "Fixed Registration Fee", "number")}
           {field("registration_currency", "Currency")}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {field(
+            "discount_amount",
+            "Discount Amount (set 0 to disable)",
+            "number",
+          )}
+          {field("discount_label", "Discount Label")}
         </div>
         {field("agreement_text", "Agreement Text", "textarea")}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
