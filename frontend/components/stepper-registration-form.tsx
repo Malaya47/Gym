@@ -161,7 +161,9 @@ export function StepperRegistrationForm({
   >("MONTHLY");
   const [contractMemberSig, setContractMemberSig] = useState("");
   const [guardianSig, setGuardianSig] = useState("");
-  const [contractPdfBase64, setContractPdfBase64] = useState<string | undefined>();
+  const [contractPdfBase64, setContractPdfBase64] = useState<
+    string | undefined
+  >();
   const [contractNumber] = useState(
     () => "CNT-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
   );
@@ -191,12 +193,12 @@ export function StepperRegistrationForm({
         if (contractResult.guardianSig)
           setGuardianSig(contractResult.guardianSig);
         // The PDF is stored in window (to avoid sessionStorage 5 MB limit)
-        const windowPdf = (
-          window as unknown as Record<string, unknown>
-        ).__gymContractPdf as string | undefined;
+        const windowPdf = (window as unknown as Record<string, unknown>)
+          .__gymContractPdf as string | undefined;
         if (windowPdf) {
           setContractPdfBase64(windowPdf);
-          delete (window as unknown as Record<string, unknown>).__gymContractPdf;
+          delete (window as unknown as Record<string, unknown>)
+            .__gymContractPdf;
         } else if (contractResult.contractPdfBase64)
           setContractPdfBase64(contractResult.contractPdfBase64);
         else if (contractResult.pdfBase64)

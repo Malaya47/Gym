@@ -312,11 +312,20 @@ router.post(
 
       if (contractPdfBase64 && typeof contractPdfBase64 === "string") {
         // Frontend generated a proper PDF via jspdf — decode and use directly
-        const base64Data = contractPdfBase64.replace(/^data:application\/pdf;base64,/, "");
+        const base64Data = contractPdfBase64.replace(
+          /^data:application\/pdf;base64,/,
+          "",
+        );
         pdfBuffer = Buffer.from(base64Data, "base64");
-      } else if (contractImageBase64 && typeof contractImageBase64 === "string") {
+      } else if (
+        contractImageBase64 &&
+        typeof contractImageBase64 === "string"
+      ) {
         // Legacy: embed the JPEG screenshot of the contract page into a PDF using pdfkit
-        const base64Data = contractImageBase64.replace(/^data:image\/jpeg;base64,/, "");
+        const base64Data = contractImageBase64.replace(
+          /^data:image\/jpeg;base64,/,
+          "",
+        );
         const imgBuffer = Buffer.from(base64Data, "base64");
 
         // Parse JPEG dimensions from SOF marker
@@ -385,7 +394,9 @@ router.post(
           planDuration,
           planPrice: Number(planPrice) || 0,
           currency,
-          additionalPlans: Array.isArray(additionalPlans) ? additionalPlans : [],
+          additionalPlans: Array.isArray(additionalPlans)
+            ? additionalPlans
+            : [],
           registrationFee: Number(registrationFee) || 0,
           discountAmount: Number(discountAmount) || 0,
           discountLabel: discountLabel || "Discount",
