@@ -697,7 +697,8 @@ export function StepperRegistrationForm({
                   type="date"
                   value={form.dateOfBirth}
                   onChange={updateForm}
-                  className="h-9 py-1 w-full rounded-md border border-white/10 bg-[#18181b] px-3 pr-8 text-base shadow-xs text-white appearance-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  style={{ colorScheme: "dark" }}
+                  className="h-9 py-1 w-full rounded-md border border-white/10 bg-[#18181b] px-3 pr-8 text-base shadow-xs text-white focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                 />
               </div>
               <div>
@@ -870,7 +871,8 @@ export function StepperRegistrationForm({
                                   onChange={(e) =>
                                     setMembershipStartDate(e.target.value)
                                   }
-                                  className="h-8 w-full rounded-md border border-white/10 bg-black/40 px-3 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-red-700/50"
+                                  style={{ colorScheme: "dark" }}
+                                  className="h-8 w-full rounded-md border border-white/10 bg-black/40 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-700/50"
                                 />
                               </div>
                               <div>
