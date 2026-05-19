@@ -21,6 +21,7 @@ export interface AgreementPdfData {
   startDate: string;
   endDate: string;
   paymentFrequency: string;
+  periodicAmount?: number | null;
   signatureDataUrl: string; // base64 data URL
   guardianSignatureDataUrl?: string;
   isMinor: boolean;
@@ -191,6 +192,20 @@ export function generateAgreementPdf(data: AgreementPdfData): Promise<Buffer> {
         `${data.discountLabel}`,
         `- ${money(data.currency, data.discountAmount)}`,
       );
+    }
+
+    // Periodic payment row
+    if (data.periodicAmount != null && data.periodicAmount > 0) {
+      const freqLabel =
+        data.paymentFrequency === "MONTHLY"
+          ? "Monthly"
+          : data.paymentFrequency === "QUARTERLY"
+            ? "Quarterly"
+            : data.paymentFrequency === "YEARLY"
+              ? "Yearly"
+              : data.paymentFrequency.charAt(0) +
+                data.paymentFrequency.slice(1).toLowerCase();
+      row(`${freqLabel} Payment`, money(data.currency, data.periodicAmount));
     }
 
     // Total line

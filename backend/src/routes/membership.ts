@@ -16,20 +16,35 @@ function parseStartDate(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function computeEndDate(startDate: Date, duration: string): Date | null {
+function parseDurationToMonths(duration: string): number {
   const match = duration
     .toLowerCase()
     .trim()
     .match(/^(\d+)\s*(month|year|day|week)/);
-  if (!match) return null;
+  if (!match) return 0;
   const num = parseInt(match[1]);
   const unit = match[2];
+  if (unit === "month") return num;
+  if (unit === "year") return num * 12;
+  if (unit === "week") return Math.round((num * 7) / 30.44);
+  if (unit === "day") return Math.round(num / 30.44);
+  return 0;
+}
+
+// Computes end date from a start date and a total number of months.
+function computeEndDateFromMonths(
+  startDate: Date,
+  totalMonths: number,
+): Date | null {
+  if (totalMonths <= 0) return null;
   const end = new Date(startDate);
-  if (unit === "month") end.setMonth(end.getMonth() + num);
-  else if (unit === "year") end.setFullYear(end.getFullYear() + num);
-  else if (unit === "day") end.setDate(end.getDate() + num);
-  else if (unit === "week") end.setDate(end.getDate() + num * 7);
+  end.setMonth(end.getMonth() + totalMonths);
   return end;
+}
+
+function computeEndDate(startDate: Date, duration: string): Date | null {
+  const months = parseDurationToMonths(duration);
+  return computeEndDateFromMonths(startDate, months);
 }
 
 // ─── GET /api/membership/plans ──────────────────────────
@@ -99,6 +114,14 @@ router.post(
         }
       }
 
+      // Total combined duration in months (main plan + additional plans)
+      const combinedMonths =
+        parseDurationToMonths(plan.duration) +
+        additionalPlans.reduce(
+          (sum, p) => sum + parseDurationToMonths(p.duration),
+          0,
+        );
+
       // Check for existing pending/approved purchase
       const existing = await prisma.membershipPurchase.findFirst({
         where: {
@@ -134,13 +157,16 @@ router.post(
         return;
       }
 
-      // Validate endDate is consistent with plan duration (if provided)
+      // Validate endDate is consistent with combined plan duration (if provided)
       const endDateStr =
         typeof details.endDate === "string" ? details.endDate : null;
       if (endDateStr) {
         const parsedEndDate = new Date(endDateStr);
         if (!Number.isNaN(parsedEndDate.getTime())) {
-          const expectedEnd = computeEndDate(parsedStartDate, plan.duration);
+          const expectedEnd =
+            combinedMonths > 0
+              ? computeEndDateFromMonths(parsedStartDate, combinedMonths)
+              : computeEndDate(parsedStartDate, plan.duration);
           if (expectedEnd) {
             const diffDays =
               Math.abs(parsedEndDate.getTime() - expectedEnd.getTime()) /
@@ -188,7 +214,9 @@ router.post(
           startDate: parsedStartDate,
           endDate: endDateStr
             ? new Date(endDateStr)
-            : computeEndDate(parsedStartDate, plan.duration),
+            : combinedMonths > 0
+              ? computeEndDateFromMonths(parsedStartDate, combinedMonths)
+              : computeEndDate(parsedStartDate, plan.duration),
           emergencyContact:
             typeof details.emergencyContact === "string"
               ? details.emergencyContact
@@ -291,6 +319,7 @@ router.post(
         startDate,
         endDate,
         paymentFrequency,
+        periodicAmount,
         signatureDataUrl,
         guardianSignatureDataUrl,
         isMinor,
@@ -404,6 +433,8 @@ router.post(
           startDate,
           endDate,
           paymentFrequency,
+          periodicAmount:
+            periodicAmount != null ? Number(periodicAmount) : null,
           signatureDataUrl: signatureDataUrl || "",
           guardianSignatureDataUrl,
           isMinor: Boolean(isMinor),
@@ -419,11 +450,24 @@ router.post(
       }
 
       const subject = `Membership Agreement – ${memberName} (${contractNumber})`;
+      const freqLabel =
+        paymentFrequency === "MONTHLY"
+          ? "Monthly"
+          : paymentFrequency === "QUARTERLY"
+            ? "Quarterly"
+            : paymentFrequency === "YEARLY"
+              ? "Yearly"
+              : String(paymentFrequency);
+      const periodicLine =
+        periodicAmount != null && Number(periodicAmount) > 0
+          ? `\nPayment Frequency: ${freqLabel} (${currency} ${Number(periodicAmount).toLocaleString(undefined, { maximumFractionDigits: 2 })} per period)`
+          : `\nPayment Frequency: ${freqLabel}`;
       const bodyText =
         `A new membership agreement has been signed.\n\n` +
         `Member: ${memberName}\nEmail: ${email}\nContract No: ${contractNumber}\n` +
-        `Plan: ${planName} (${planDuration})\nTotal: ${currency} ${total}\n` +
-        `Start Date: ${startDate}\n\nPlease find the signed agreement attached.`;
+        `Plan: ${planName} (${planDuration})\nTotal: ${currency} ${total}` +
+        periodicLine +
+        `\nStart Date: ${startDate}\n\nPlease find the signed agreement attached.`;
 
       const attachment = {
         filename: `Agreement-${contractNumber}.pdf`,
@@ -439,8 +483,9 @@ router.post(
         text:
           `Dear ${memberName},\n\nThank you for signing your membership agreement. ` +
           `Please find your signed agreement attached.\n\n` +
-          `Contract No: ${contractNumber}\nPlan: ${planName}\nStart Date: ${startDate}\n\n` +
-          `Welcome to Sentinators Gym! We look forward to seeing you.\n\nTeam Sentinators`,
+          `Contract No: ${contractNumber}\nPlan: ${planName}\nStart Date: ${startDate}` +
+          periodicLine +
+          `\n\nWelcome to Sentinators Gym! We look forward to seeing you.\n\nTeam Sentinators`,
         attachments: [attachment],
       });
 

@@ -18,6 +18,45 @@ import {
 const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"] as const;
 const FREQUENCY_FILTERS = ["ALL", "MONTHLY", "QUARTERLY", "ANNUALLY"] as const;
 
+// Converts a duration string like "6 months" / "1 year" to months.
+function parseDurationToMonths(duration: string): number {
+  if (!duration) return 0;
+  const match = duration
+    .toLowerCase()
+    .trim()
+    .match(/^(\d+)\s*(month|year|day|week)/);
+  if (!match) return 0;
+  const num = parseInt(match[1]);
+  const unit = match[2];
+  if (unit === "month") return num;
+  if (unit === "year") return num * 12;
+  if (unit === "week") return Math.round((num * 7) / 30.44);
+  if (unit === "day") return Math.round(num / 30.44);
+  return 0;
+}
+
+function getAdminPerPeriodInfo(
+  totalAmount: number | undefined,
+  registrationFee: number | undefined,
+  totalMonths: number,
+  paymentFrequency: string | undefined,
+): { perPeriod: number; label: string; unit: string } | null {
+  if (!totalMonths || totalMonths <= 0 || !paymentFrequency) return null;
+  const membershipCost = Math.max(
+    0,
+    (totalAmount ?? 0) - (registrationFee ?? 0),
+  );
+  const monthly = membershipCost / totalMonths;
+  const freq = paymentFrequency.toUpperCase();
+  if (freq === "MONTHLY")
+    return { perPeriod: monthly, label: "Monthly", unit: "/mo" };
+  if (freq === "QUARTERLY")
+    return { perPeriod: monthly * 3, label: "Quarterly", unit: "/qtr" };
+  if (freq === "YEARLY" || freq === "ANNUALLY")
+    return { perPeriod: monthly * 12, label: "Yearly", unit: "/yr" };
+  return null;
+}
+
 const statusBadge = (status: string) => {
   switch (status) {
     case "PENDING":
@@ -338,18 +377,62 @@ export function AdminMemberships() {
                     ))}
                   </div>
                 )}
+                {/* Combined duration + per-period billing breakdown */}
+                {(() => {
+                  const totalMonths =
+                    parseDurationToMonths(m.plan.duration) +
+                    (m.additionalPlans ?? []).reduce(
+                      (sum, ap) => sum + parseDurationToMonths(ap.duration),
+                      0,
+                    );
+                  const periodInfo = getAdminPerPeriodInfo(
+                    m.totalAmount,
+                    m.registrationFee,
+                    totalMonths,
+                    m.paymentFrequency,
+                  );
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {totalMonths > 0 && (
+                        <span className="text-xs border border-white/10 bg-white/5 text-white/50 px-2 py-0.5 rounded-full">
+                          {totalMonths} month{totalMonths !== 1 ? "s" : ""}{" "}
+                          total
+                        </span>
+                      )}
+                      {m.paymentFrequency && (
+                        <span className="text-xs border border-blue-500/20 bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-full font-medium">
+                          {periodInfo
+                            ? periodInfo.label
+                            : m.paymentFrequency.charAt(0) +
+                              m.paymentFrequency.slice(1).toLowerCase()}
+                        </span>
+                      )}
+                      {periodInfo && (
+                        <span className="text-xs border border-purple-500/20 bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded-full font-semibold">
+                          {m.plan.currency}{" "}
+                          {periodInfo.perPeriod.toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })}
+                          <span className="font-normal opacity-70 ml-0.5">
+                            {periodInfo.unit}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/45">
                   <span>
                     Registration fee: {m.plan.currency}{" "}
                     {(m.registrationFee ?? 0).toFixed(2)}
                   </span>
                   <span>
-                    Total: {m.plan.currency}{" "}
+                    Total (full duration): {m.plan.currency}{" "}
                     {(m.totalAmount ?? m.plan.price).toFixed(2)}
                   </span>
                   {m.paymentFrequency && (
                     <span>
-                      Payment:{" "}
+                      Billing frequency:{" "}
                       <span className="text-white/70 font-medium capitalize">
                         {m.paymentFrequency.charAt(0) +
                           m.paymentFrequency.slice(1).toLowerCase()}

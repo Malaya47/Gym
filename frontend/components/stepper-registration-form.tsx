@@ -109,6 +109,23 @@ function parseDurationToEndDate(
   return end.toISOString().slice(0, 10);
 }
 
+// Converts a duration string (e.g. "6 months", "1 year") to a number of months.
+function parseDurationToMonths(duration: string): number {
+  if (!duration) return 0;
+  const match = duration
+    .toLowerCase()
+    .trim()
+    .match(/^(\d+)\s*(month|year|day|week)/);
+  if (!match) return 0;
+  const num = parseInt(match[1]);
+  const unit = match[2];
+  if (unit === "month") return num;
+  if (unit === "year") return num * 12;
+  if (unit === "week") return Math.round((num * 7) / 30.44);
+  if (unit === "day") return Math.round(num / 30.44);
+  return 0;
+}
+
 function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
   const d = new Date(dateStr + "T00:00:00");
@@ -278,16 +295,6 @@ export function StepperRegistrationForm({
   const discountAmount = Math.max(0, Number(content.discount_amount) || 0);
   const discountLabel = content.discount_label || "Discount";
 
-  // Auto-calculate end date when plan or start date changes
-  useEffect(() => {
-    if (membershipStartDate && selectedPlan) {
-      setMembershipEndDate(
-        parseDurationToEndDate(membershipStartDate, selectedPlan.duration),
-      );
-    } else {
-      setMembershipEndDate("");
-    }
-  }, [membershipStartDate, selectedPlan]);
   const currency = selectedPlan?.currency || content.registration_currency;
 
   const isMinor = useMemo(() => {
@@ -312,6 +319,37 @@ export function StepperRegistrationForm({
   const selectedAdditionalPlans = additionalPlans.filter((p) =>
     selectedAdditionalPlanIds.includes(p.id),
   );
+
+  // Auto-calculate end date when plan, additional plans, or start date changes.
+  // Combines durations of main plan + all additional plans.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (membershipStartDate && selectedPlan) {
+      const mainMonths = parseDurationToMonths(selectedPlan.duration);
+      const addMonths = selectedAdditionalPlans.reduce(
+        (sum, p) => sum + parseDurationToMonths(p.duration),
+        0,
+      );
+      const totalMonths = mainMonths + addMonths;
+      if (totalMonths > 0) {
+        const start = new Date(membershipStartDate + "T00:00:00");
+        if (!Number.isNaN(start.getTime())) {
+          start.setMonth(start.getMonth() + totalMonths);
+          setMembershipEndDate(start.toISOString().slice(0, 10));
+        } else {
+          setMembershipEndDate("");
+        }
+      } else {
+        // Fallback to main plan's own parsed end date
+        setMembershipEndDate(
+          parseDurationToEndDate(membershipStartDate, selectedPlan.duration),
+        );
+      }
+    } else {
+      setMembershipEndDate("");
+    }
+  }, [membershipStartDate, selectedPlan, selectedAdditionalPlans]);
+
   const additionalTotal = selectedAdditionalPlans.reduce(
     (sum, p) => sum + p.price,
     0,
@@ -319,6 +357,45 @@ export function StepperRegistrationForm({
   const subtotal =
     (selectedPlan?.price ?? 0) + additionalTotal + registrationFee;
   const total = Math.max(0, subtotal - discountAmount);
+
+  // Total duration in months: main plan + all additional plans combined
+  const totalPlanMonths =
+    parseDurationToMonths(selectedPlan?.duration ?? "") +
+    selectedAdditionalPlans.reduce(
+      (sum, p) => sum + parseDurationToMonths(p.duration),
+      0,
+    );
+
+  // Membership cost (excluding registration fee, after discount)
+  const membershipNetCost = Math.max(0, total - registrationFee);
+
+  // Auto-reset payment frequency if it becomes invalid for the current duration
+  useEffect(() => {
+    if (
+      totalPlanMonths > 0 &&
+      totalPlanMonths < 3 &&
+      paymentFrequency !== "MONTHLY"
+    ) {
+      setPaymentFrequency("MONTHLY");
+    } else if (
+      totalPlanMonths >= 3 &&
+      totalPlanMonths < 12 &&
+      paymentFrequency === "YEARLY"
+    ) {
+      setPaymentFrequency("QUARTERLY");
+    }
+  }, [totalPlanMonths, paymentFrequency]);
+
+  // Per-period payment amount based on frequency and total months
+  function calcPerPeriod(
+    freq: "MONTHLY" | "QUARTERLY" | "YEARLY",
+  ): number | null {
+    if (totalPlanMonths <= 0 || !selectedPlan) return null;
+    const monthly = membershipNetCost / totalPlanMonths;
+    if (freq === "MONTHLY") return monthly;
+    if (freq === "QUARTERLY") return monthly * 3;
+    return monthly * 12;
+  }
 
   const isBusy = authLoading || purchaseLoading;
 
@@ -467,6 +544,7 @@ export function StepperRegistrationForm({
       membershipStartDate,
       membershipEndDate,
       paymentFrequency,
+      periodicAmount: calcPerPeriod(paymentFrequency),
       step,
       activePlanCategory,
       agreementChecks,
@@ -577,6 +655,7 @@ export function StepperRegistrationForm({
           startDate: membershipStartDate,
           endDate: membershipEndDate,
           paymentFrequency,
+          periodicAmount: calcPerPeriod(paymentFrequency),
           signatureDataUrl,
           guardianSignatureDataUrl: guardianSig || undefined,
           isMinor,
@@ -599,13 +678,12 @@ export function StepperRegistrationForm({
     <div
       ref={formShellRef}
       className="mx-auto w-full max-w-[1140px] text-white px-2 sm:px-4 md:px-6 lg:px-8"
-      style={{ minHeight: "50vh", boxSizing: "border-box" }}
     >
-      <div className="mb-4 text-center">
-        <h2 className="text-2xl font-bold tracking-wide sm:text-3xl">
+      <div className="mb-2 text-center">
+        <h2 className="text-xl font-bold tracking-wide sm:text-2xl">
           Membership Registration
         </h2>
-        <div className="mx-auto mt-4 grid max-w-3xl grid-cols-4 gap-2">
+        <div className="mx-auto mt-2 grid max-w-3xl grid-cols-4 gap-2">
           {STEPS.map((label, index) => {
             const active = index <= step;
             return (
@@ -640,9 +718,9 @@ export function StepperRegistrationForm({
       )}
 
       {step === 0 && (
-        <div className="flex flex-col md:grid min-h-[420px] items-stretch gap-4 md:gap-6 lg:grid-cols-[minmax(280px,0.9fr)_minmax(360px,1.1fr)]">
+        <div className="flex flex-col md:grid items-stretch gap-3 md:gap-4 lg:grid-cols-[minmax(280px,0.9fr)_minmax(360px,1.1fr)]">
           {/* Hide image on small screens */}
-          <div className="hidden md:flex h-full items-stretch justify-center rounded-xl border border-white/10 bg-black/50 overflow-hidden min-h-[220px]">
+          <div className="hidden md:flex h-full items-stretch justify-center rounded-xl border border-white/10 bg-black/50 overflow-hidden">
             <Image
               src="/about-hero-image.png"
               alt="Member profile"
@@ -652,8 +730,8 @@ export function StepperRegistrationForm({
               priority
             />
           </div>
-          <div className="h-full flex flex-col justify-center w-full md:w-auto">
-            <div className="space-y-4 w-full max-w-md mx-auto md:w-[80%] md:mx-5">
+          <div className="flex flex-col justify-center w-full md:w-auto">
+            <div className="space-y-2.5 w-full max-w-md mx-auto md:w-[80%] md:mx-5">
               <Field
                 label="First Name"
                 name="firstName"
@@ -702,7 +780,7 @@ export function StepperRegistrationForm({
                   value={form.dateOfBirth}
                   onChange={updateForm}
                   style={{ colorScheme: "dark" }}
-                  className="h-9 py-1 w-full rounded-md border border-white/10 bg-[#18181b] px-3 pr-8 text-base shadow-xs text-white focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  className="h-8 py-0.5 w-full rounded-md border border-white/10 bg-[#18181b] px-3 pr-8 text-sm shadow-xs text-white focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                 />
               </div>
               <div>
@@ -711,7 +789,7 @@ export function StepperRegistrationForm({
                   name="gender"
                   value={form.gender}
                   onChange={updateForm}
-                  className="h-9 py-1 w-full rounded-md border border-white/10 bg-[#18181b] px-3 pr-8 text-base shadow-xs text-white appearance-none bg-[url('data:image/svg+xml,%3Csvg width='16' height='16' fill='none' stroke='white' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E')] bg-no-repeat bg-right bg-[length:1.25em_1.25em] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  className="h-8 py-0.5 w-full rounded-md border border-white/10 bg-[#18181b] px-3 pr-8 text-sm shadow-xs text-white appearance-none bg-[url('data:image/svg+xml,%3Csvg width='16' height='16' fill='none' stroke='white' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E')] bg-no-repeat bg-right bg-[length:1.25em_1.25em] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                 >
                   <option value="">Select</option>
                   <option value="male">Male</option>
@@ -725,7 +803,7 @@ export function StepperRegistrationForm({
       )}
 
       {step === 1 && (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_280px] w-full">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_280px] w-full items-start">
           <div className="space-y-4 min-w-0">
             {plansLoading ? (
               <div className="flex items-center justify-center gap-2 py-10 text-white/60">
@@ -905,7 +983,7 @@ export function StepperRegistrationForm({
               </div>
             )}
           </div>
-          <div className="flex flex-col justify-start gap-3">
+          <div className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
             <TotalBox
               currency={currency}
               plan={selectedPlan}
@@ -914,52 +992,85 @@ export function StepperRegistrationForm({
               discountAmount={discountAmount}
               discountLabel={discountLabel}
               total={total}
+              paymentFrequency={paymentFrequency}
+              totalPlanMonths={totalPlanMonths}
             />
             {/* Payment Frequency Selector */}
-            <div className="rounded-lg border border-white/10 bg-[#120817] p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/50">
+            <div className="rounded-lg border border-white/10 bg-[#120817] p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
                 Payment Frequency
               </p>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 {(
                   [
-                    { value: "MONTHLY", label: "Monthly" },
-                    { value: "QUARTERLY", label: "Quarterly" },
-                    { value: "YEARLY", label: "Yearly" },
+                    {
+                      value: "MONTHLY",
+                      label: "Monthly",
+                      unit: "/mo",
+                      minMonths: 1,
+                    },
+                    {
+                      value: "QUARTERLY",
+                      label: "Quarterly",
+                      unit: "/qtr",
+                      minMonths: 3,
+                    },
+                    {
+                      value: "YEARLY",
+                      label: "Yearly",
+                      unit: "/yr",
+                      minMonths: 12,
+                    },
                   ] as const
-                ).map(({ value, label }) => (
-                  <label
-                    key={value}
-                    className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 transition ${
-                      paymentFrequency === value
-                        ? "border-red-500 bg-red-950/40"
-                        : "border-white/10 bg-white/5 hover:border-white/25"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentFrequency"
-                      value={value}
-                      checked={paymentFrequency === value}
-                      onChange={() => setPaymentFrequency(value)}
-                      className="sr-only"
-                    />
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                        paymentFrequency === value
-                          ? "border-red-500 bg-red-600"
-                          : "border-white/30"
-                      }`}
-                    >
-                      {paymentFrequency === value && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                      )}
-                    </span>
-                    <span className="text-sm font-medium text-white">
-                      {label}
-                    </span>
-                  </label>
-                ))}
+                )
+                  .filter(
+                    ({ minMonths }) =>
+                      totalPlanMonths === 0 || totalPlanMonths >= minMonths,
+                  )
+                  .map(({ value, label, unit }) => {
+                    const periodAmt = calcPerPeriod(value);
+                    return (
+                      <label
+                        key={value}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 transition ${
+                          paymentFrequency === value
+                            ? "border-red-500 bg-red-950/40"
+                            : "border-white/10 bg-white/5 hover:border-white/25"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentFrequency"
+                          value={value}
+                          checked={paymentFrequency === value}
+                          onChange={() => setPaymentFrequency(value)}
+                          className="sr-only"
+                        />
+                        <span
+                          className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${
+                            paymentFrequency === value
+                              ? "border-red-500 bg-red-600"
+                              : "border-white/30"
+                          }`}
+                        >
+                          {paymentFrequency === value && (
+                            <span className="h-1 w-1 rounded-full bg-white" />
+                          )}
+                        </span>
+                        <span className="flex-1 text-xs font-medium text-white">
+                          {label}
+                        </span>
+                        {periodAmt !== null && (
+                          <span className="text-xs font-semibold text-white/80">
+                            {money(currency, periodAmt)}
+                            <span className="text-white/40 font-normal ml-0.5">
+                              {unit}
+                            </span>
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
               </div>
             </div>
             <div className="flex gap-3 justify-between">
@@ -1040,6 +1151,8 @@ export function StepperRegistrationForm({
               discountAmount={discountAmount}
               discountLabel={discountLabel}
               total={total}
+              paymentFrequency={paymentFrequency}
+              totalPlanMonths={totalPlanMonths}
             />
           </div>
         </div>
@@ -1117,13 +1230,15 @@ export function StepperRegistrationForm({
               discountAmount={discountAmount}
               discountLabel={discountLabel}
               total={total}
+              paymentFrequency={paymentFrequency}
+              totalPlanMonths={totalPlanMonths}
             />
           </div>
         </div>
       )}
 
       <div
-        className={`mt-5 flex gap-3 w-full max-w-4xl mx-auto ${step === 1 ? "hidden" : step === 0 ? "justify-end" : "justify-between"}`}
+        className={`mt-3 flex gap-3 w-full max-w-4xl mx-auto ${step === 1 ? "hidden" : step === 0 ? "justify-end" : "justify-between"}`}
       >
         {step > 0 && (
           <Button
@@ -1220,6 +1335,8 @@ function TotalBox({
   discountAmount,
   discountLabel,
   total,
+  paymentFrequency,
+  totalPlanMonths,
 }: {
   currency: string;
   plan: MembershipPlan | null;
@@ -1228,7 +1345,36 @@ function TotalBox({
   discountAmount: number;
   discountLabel: string;
   total: number;
+  paymentFrequency?: "MONTHLY" | "QUARTERLY" | "YEARLY";
+  totalPlanMonths?: number;
 }) {
+  const membershipNet = Math.max(0, total - registrationFee);
+  const months = totalPlanMonths ?? 0;
+  const monthlyRate = months > 0 && plan ? membershipNet / months : null;
+
+  const freqLabel =
+    paymentFrequency === "MONTHLY"
+      ? "Monthly"
+      : paymentFrequency === "QUARTERLY"
+        ? "Quarterly"
+        : paymentFrequency === "YEARLY"
+          ? "Yearly"
+          : null;
+  const freqUnit =
+    paymentFrequency === "MONTHLY"
+      ? "/mo"
+      : paymentFrequency === "QUARTERLY"
+        ? "/qtr"
+        : "/yr";
+  const freqMultiplier =
+    paymentFrequency === "MONTHLY"
+      ? 1
+      : paymentFrequency === "QUARTERLY"
+        ? 3
+        : 12;
+  const periodAmount =
+    monthlyRate !== null ? monthlyRate * freqMultiplier : null;
+
   return (
     <div className="rounded-lg border border-white/10 bg-[#120817] p-4">
       <div className="flex items-center justify-between gap-4 text-sm text-white/65">
@@ -1254,10 +1400,31 @@ function TotalBox({
           <span>- {money(currency, discountAmount)}</span>
         </div>
       )}
-      <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3 text-lg font-bold">
-        <span>Total</span>
+      <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3 text-base font-bold">
+        <span>Total (full duration)</span>
         <span>{money(currency, total)}</span>
       </div>
+      {months > 0 && plan && (
+        <div className="mt-1 flex items-center justify-between gap-4 text-xs text-white/35">
+          <span>Duration</span>
+          <span>
+            {months} month{months !== 1 ? "s" : ""}
+          </span>
+        </div>
+      )}
+      {periodAmount !== null && freqLabel && (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <p className="mb-1.5 text-[10px] text-white/35 uppercase tracking-wider font-medium">
+            You pay ({freqLabel})
+          </p>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-xl font-bold text-white">
+              {money(currency, periodAmount)}
+            </span>
+            <span className="text-xs text-white/40">{freqUnit}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

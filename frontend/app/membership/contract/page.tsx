@@ -39,6 +39,7 @@ type RegState = {
   membershipStartDate: string;
   membershipEndDate: string;
   paymentFrequency: "MONTHLY" | "QUARTERLY" | "YEARLY";
+  periodicAmount: number | null;
   currency: string;
   registrationFee: number;
   discountAmount: number;
@@ -403,6 +404,7 @@ export default function MembershipContractPage() {
     membershipStartDate,
     membershipEndDate,
     paymentFrequency,
+    periodicAmount,
     currency,
     registrationFee,
     discountAmount,
@@ -606,6 +608,19 @@ export default function MembershipContractPage() {
                       </label>
                     ))}
                   </div>
+                  {periodicAmount != null && (
+                    <div className="flex justify-between font-semibold pt-1 text-red-700">
+                      <span>
+                        Due per{" "}
+                        {paymentFrequency === "MONTHLY"
+                          ? "month"
+                          : paymentFrequency === "QUARTERLY"
+                            ? "quarter"
+                            : "year"}
+                      </span>
+                      <span>{money(currency, periodicAmount)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
