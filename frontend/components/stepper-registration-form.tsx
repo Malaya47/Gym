@@ -17,6 +17,12 @@ import {
 } from "@/store/slices/membershipSlice";
 import { useRouter } from "next/navigation";
 import { Check, Eraser, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Step = 0 | 1 | 2 | 3;
 
@@ -178,6 +184,7 @@ export function StepperRegistrationForm({
   >("MONTHLY");
   const [contractMemberSig, setContractMemberSig] = useState("");
   const [guardianSig, setGuardianSig] = useState("");
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [contractPdfBase64, setContractPdfBase64] = useState<
     string | undefined
   >();
@@ -1158,6 +1165,141 @@ export function StepperRegistrationForm({
         </div>
       )}
 
+      {showTermsModal && (
+        <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
+          <DialogContent className="bg-[#0f0a14] border border-white/10 text-white max-w-2xl w-full max-h-[75vh] flex flex-col p-0 overflow-hidden">
+            <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
+              <DialogTitle className="text-lg font-bold text-white">
+                Membership Terms &amp; Conditions
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 text-sm text-white/75 leading-relaxed">
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  1. Membership Agreement
+                </h3>
+                <p>
+                  By joining, you enter into a binding membership agreement with
+                  the gym. The membership starts from your selected start date
+                  and remains valid for the agreed duration. Membership fees are
+                  non-refundable once the membership period begins.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  2. Payment Terms
+                </h3>
+                <p>
+                  All fees must be paid in advance according to the selected
+                  payment frequency (monthly, quarterly, or yearly). Failure to
+                  pay may result in suspension or termination of membership.
+                  Late payments may incur additional charges.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  3. Gym Rules &amp; House Rules
+                </h3>
+                <p>
+                  Members must conduct themselves respectfully at all times.
+                  Proper gym attire and footwear are required. Equipment must be
+                  returned to its designated place after use. Aggressive or
+                  unsafe behaviour will result in immediate termination of
+                  membership without refund.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  4. Health &amp; Safety Responsibility
+                </h3>
+                <p>
+                  You confirm that you are in good physical health and have
+                  consulted a medical professional if required before commencing
+                  any exercise program. The gym will not be held liable for any
+                  injury, illness, or loss of personal property during your use
+                  of the facilities. You exercise at your own risk.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  5. Cancellation Policy
+                </h3>
+                <p>
+                  Memberships may be cancelled with a written notice of at least
+                  30 days before the next billing cycle. Early termination fees
+                  may apply. Monthly memberships cannot be cancelled mid-cycle;
+                  cancellation takes effect at the end of the current period.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  6. Freeze &amp; Suspension
+                </h3>
+                <p>
+                  Members may request a membership freeze for medical reasons
+                  with valid documentation. Freeze periods extend the membership
+                  end date accordingly. Abuse of freeze requests may result in
+                  membership termination.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  7. Guest Policy
+                </h3>
+                <p>
+                  Guests are only permitted when accompanied by an active member
+                  and subject to a guest fee. Guest visits are limited per month
+                  and guests must register at reception. Members are responsible
+                  for the behaviour of their guests.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">
+                  8. Privacy &amp; Data
+                </h3>
+                <p>
+                  Your personal data will be processed in accordance with our
+                  Privacy Policy. We collect and store data necessary to manage
+                  your membership and may contact you with relevant information
+                  about your account or facility updates.
+                </p>
+              </section>
+              <section>
+                <h3 className="font-semibold text-white mb-1">9. Amendments</h3>
+                <p>
+                  The gym reserves the right to amend these terms at any time.
+                  Members will be notified of significant changes with
+                  reasonable notice. Continued use of the facilities after
+                  notification constitutes acceptance of the updated terms.
+                </p>
+              </section>
+            </div>
+            <div className="px-6 py-4 border-t border-white/10 shrink-0 flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowTermsModal(false)}
+                className="border-white/15 bg-transparent text-white hover:bg-white/10"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setTermChecks((prev) =>
+                    prev.map((item, i) => (i === 0 ? true : item)),
+                  );
+                  setShowTermsModal(false);
+                }}
+                className="btn-gradient text-white flex-1"
+              >
+                I Agree to the Terms &amp; Conditions
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {step === 3 && (
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_320px] w-full max-w-4xl mx-auto">
           {/* Left: terms + signature */}
@@ -1167,20 +1309,42 @@ export function StepperRegistrationForm({
                 {content.terms_text}
               </p>
               <div className="space-y-3 rounded-md bg-white/10 p-4">
-                {[content.terms_checkbox_1, content.terms_checkbox_2].map(
-                  (label, index) => (
-                    <CheckRow
-                      key={label}
-                      label={label}
-                      checked={termChecks[index]}
-                      onCheckedChange={(checked) =>
+                {/* First checkbox opens terms modal */}
+                <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-white/80">
+                  <Checkbox
+                    checked={termChecks[0]}
+                    onCheckedChange={() => {
+                      if (!termChecks[0]) {
+                        setShowTermsModal(true);
+                      } else {
                         setTermChecks((prev) =>
-                          prev.map((item, i) => (i === index ? checked : item)),
-                        )
+                          prev.map((item, i) => (i === 0 ? false : item)),
+                        );
                       }
-                    />
-                  ),
-                )}
+                    }}
+                    className="mt-0.5 border-white/30 data-[state=checked]:bg-red-700"
+                  />
+                  <span>
+                    {content.terms_checkbox_1}{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="underline text-red-400 hover:text-red-300 text-xs font-medium ml-1"
+                    >
+                      {termChecks[0] ? "(view terms)" : "Read Terms →"}
+                    </button>
+                  </span>
+                </label>
+                {/* Second checkbox */}
+                <CheckRow
+                  label={content.terms_checkbox_2}
+                  checked={termChecks[1]}
+                  onCheckedChange={(checked) =>
+                    setTermChecks((prev) =>
+                      prev.map((item, i) => (i === 1 ? checked : item)),
+                    )
+                  }
+                />
               </div>
             </div>
             <div className="rounded-lg bg-white/5 p-4">
