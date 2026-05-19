@@ -875,6 +875,8 @@ type MembershipPlan = {
   name: string;
   duration: string;
   price: number;
+  monthlyPrice: number | null;
+  quarterlyPrice: number | null;
   currency: string;
   features: string; // comma-separated
   category: string;
@@ -892,6 +894,8 @@ const emptyPlan: Omit<MembershipPlan, "id"> = {
   name: "",
   duration: "",
   price: 0,
+  monthlyPrice: null,
+  quarterlyPrice: null,
   currency: "CHF",
   features: "",
   category: "MEMBERSHIP",
@@ -904,7 +908,7 @@ function PlanForm({
   categories,
 }: {
   form: Partial<Omit<MembershipPlan, "id">>;
-  onChange: (key: string, value: string | number | boolean) => void;
+  onChange: (key: string, value: string | number | boolean | null) => void;
   categories: PlanCategoryItem[];
 }) {
   return (
@@ -938,7 +942,9 @@ function PlanForm({
             type="number"
             min={0}
             value={String(form.price ?? "")}
-            onChange={(e) => onChange("price", Number(e.target.value))}
+            onChange={(e) =>
+              onChange("price", Math.max(0, Number(e.target.value)))
+            }
             className="bg-[#1a1a1a] border-white/10 text-white text-sm"
           />
         </div>
@@ -949,6 +955,64 @@ function PlanForm({
             onChange={(e) => onChange("currency", e.target.value)}
             className="bg-[#1a1a1a] border-white/10 text-white text-sm"
           />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-white/50 text-xs mb-1 block">
+            Monthly Price{" "}
+            <span className="text-white/30 font-normal">(optional)</span>
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            value={
+              form.monthlyPrice != null && form.monthlyPrice > 0
+                ? String(form.monthlyPrice)
+                : ""
+            }
+            onChange={(e) =>
+              onChange(
+                "monthlyPrice",
+                e.target.value === ""
+                  ? null
+                  : Math.max(0, Number(e.target.value)),
+              )
+            }
+            placeholder="e.g. 70"
+            className="bg-[#1a1a1a] border-white/10 text-white text-sm"
+          />
+          <p className="text-white/25 text-[10px] mt-0.5">
+            Per month if paying monthly. Leave blank to auto-calculate.
+          </p>
+        </div>
+        <div>
+          <Label className="text-white/50 text-xs mb-1 block">
+            Quarterly Price{" "}
+            <span className="text-white/30 font-normal">(optional)</span>
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            value={
+              form.quarterlyPrice != null && form.quarterlyPrice > 0
+                ? String(form.quarterlyPrice)
+                : ""
+            }
+            onChange={(e) =>
+              onChange(
+                "quarterlyPrice",
+                e.target.value === ""
+                  ? null
+                  : Math.max(0, Number(e.target.value)),
+              )
+            }
+            placeholder="e.g. 105"
+            className="bg-[#1a1a1a] border-white/10 text-white text-sm"
+          />
+          <p className="text-white/25 text-[10px] mt-0.5">
+            Per quarter if paying quarterly. Leave blank to auto-calculate.
+          </p>
         </div>
       </div>
       <div>

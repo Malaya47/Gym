@@ -58,16 +58,18 @@ model User {
 
 // ─── Membership Plan (static catalog) ──────────────────
 model MembershipPlan {
-  id        Int          @id @default(autoincrement())
-  name      String
-  duration  String       // e.g. "12 Months"
-  price     Float
-  currency  String       @default("CHF")
-  features  String[]     // stored as array
-  category  String       @default("MEMBERSHIP")
-  isActive  Boolean      @default(true)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id             Int          @id @default(autoincrement())
+  name           String
+  duration       String       // e.g. "12 Months"
+  price          Float
+  monthlyPrice   Float?       // per-month charge if paying monthly (optional)
+  quarterlyPrice Float?       // per-quarter charge if paying quarterly (optional)
+  currency       String       @default("CHF")
+  features       String[]     // stored as array
+  category       String       @default("MEMBERSHIP")
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   purchases MembershipPurchase[]
 }

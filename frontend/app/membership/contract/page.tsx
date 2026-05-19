@@ -38,7 +38,7 @@ type RegState = {
   plans: PlanInfo[];
   membershipStartDate: string;
   membershipEndDate: string;
-  paymentFrequency: "MONTHLY" | "QUARTERLY" | "YEARLY";
+  paymentFrequency: "MONTHLY" | "QUARTERLY" | "YEARLY" | "UPFRONT";
   periodicAmount: number | null;
   currency: string;
   registrationFee: number;
@@ -593,7 +593,9 @@ export default function MembershipContractPage() {
                     <span>{money(currency, total)}</span>
                   </div>
                   <div className="pt-2 border-t border-gray-200 flex flex-wrap gap-3">
-                    {(["MONTHLY", "QUARTERLY", "YEARLY"] as const).map((f) => (
+                    {(
+                      ["UPFRONT", "MONTHLY", "QUARTERLY", "YEARLY"] as const
+                    ).map((f) => (
                       <label
                         key={f}
                         className="flex items-center gap-1.5 cursor-default text-gray-900"
@@ -604,11 +606,15 @@ export default function MembershipContractPage() {
                           checked={paymentFrequency === f}
                           className="accent-red-700 w-3 h-3"
                         />
-                        <span>{f.charAt(0) + f.slice(1).toLowerCase()}</span>
+                        <span>
+                          {f === "UPFRONT"
+                            ? "Upfront"
+                            : f.charAt(0) + f.slice(1).toLowerCase()}
+                        </span>
                       </label>
                     ))}
                   </div>
-                  {periodicAmount != null && (
+                  {periodicAmount != null && paymentFrequency !== "UPFRONT" && (
                     <div className="flex justify-between font-semibold pt-1 text-red-700">
                       <span>
                         Due per{" "}

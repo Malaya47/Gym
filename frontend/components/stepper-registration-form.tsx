@@ -180,8 +180,8 @@ export function StepperRegistrationForm({
   const [membershipStartDate, setMembershipStartDate] = useState("");
   const [membershipEndDate, setMembershipEndDate] = useState("");
   const [paymentFrequency, setPaymentFrequency] = useState<
-    "MONTHLY" | "QUARTERLY" | "YEARLY"
-  >("MONTHLY");
+    "MONTHLY" | "QUARTERLY" | "YEARLY" | "UPFRONT"
+  >("UPFRONT");
   const [contractMemberSig, setContractMemberSig] = useState("");
   const [guardianSig, setGuardianSig] = useState("");
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -376,14 +376,50 @@ export function StepperRegistrationForm({
   // Membership cost (excluding registration fee, after discount)
   const membershipNetCost = Math.max(0, total - registrationFee);
 
+  // Frequency-adjusted total: if admin set explicit monthly/quarterly prices,
+  // the real total the user pays is different (higher) than the upfront price.
+  const frequencyAdjustedTotal = (() => {
+    if (!selectedPlan || totalPlanMonths <= 0 || paymentFrequency === "UPFRONT")
+      return total;
+    if (
+      paymentFrequency === "MONTHLY" &&
+      selectedPlan.monthlyPrice != null &&
+      selectedPlan.monthlyPrice > 0
+    ) {
+      return Math.max(
+        0,
+        selectedPlan.monthlyPrice * totalPlanMonths +
+          additionalTotal +
+          registrationFee -
+          discountAmount,
+      );
+    }
+    if (
+      paymentFrequency === "QUARTERLY" &&
+      selectedPlan.quarterlyPrice != null &&
+      selectedPlan.quarterlyPrice > 0
+    ) {
+      const quarters = Math.floor(totalPlanMonths / 3);
+      return Math.max(
+        0,
+        selectedPlan.quarterlyPrice * quarters +
+          additionalTotal +
+          registrationFee -
+          discountAmount,
+      );
+    }
+    return total;
+  })();
+
   // Auto-reset payment frequency if it becomes invalid for the current duration
   useEffect(() => {
     if (
       totalPlanMonths > 0 &&
       totalPlanMonths < 3 &&
-      paymentFrequency !== "MONTHLY"
+      paymentFrequency !== "MONTHLY" &&
+      paymentFrequency !== "UPFRONT"
     ) {
-      setPaymentFrequency("MONTHLY");
+      setPaymentFrequency("UPFRONT");
     } else if (
       totalPlanMonths >= 3 &&
       totalPlanMonths < 12 &&
@@ -395,13 +431,31 @@ export function StepperRegistrationForm({
 
   // Per-period payment amount based on frequency and total months
   function calcPerPeriod(
-    freq: "MONTHLY" | "QUARTERLY" | "YEARLY",
+    freq: "MONTHLY" | "QUARTERLY" | "YEARLY" | "UPFRONT",
   ): number | null {
-    if (totalPlanMonths <= 0 || !selectedPlan) return null;
-    const monthly = membershipNetCost / totalPlanMonths;
-    if (freq === "MONTHLY") return monthly;
-    if (freq === "QUARTERLY") return monthly * 3;
-    return monthly * 12;
+    if (freq === "UPFRONT" || totalPlanMonths <= 0 || !selectedPlan)
+      return null;
+    const fallbackMonthly = membershipNetCost / totalPlanMonths;
+
+    if (freq === "MONTHLY") {
+      // Use plan's explicit monthly price if set by admin
+      if (selectedPlan.monthlyPrice != null && selectedPlan.monthlyPrice > 0)
+        return selectedPlan.monthlyPrice;
+      return fallbackMonthly;
+    }
+    if (freq === "QUARTERLY") {
+      if (totalPlanMonths < 3) return null;
+      // Use plan's explicit quarterly price if set by admin
+      if (
+        selectedPlan.quarterlyPrice != null &&
+        selectedPlan.quarterlyPrice > 0
+      )
+        return selectedPlan.quarterlyPrice;
+      return fallbackMonthly * 3;
+    }
+    // YEARLY
+    if (totalPlanMonths < 12) return null;
+    return fallbackMonthly * 12;
   }
 
   const isBusy = authLoading || purchaseLoading;
@@ -563,7 +617,7 @@ export function StepperRegistrationForm({
       registrationFee,
       discountAmount,
       discountLabel,
-      total,
+      total: frequencyAdjustedTotal,
       planCategories,
       selectedPlan: selectedPlan ?? null,
       selectedAdditionalPlans: selectedAdditionalPlans.map((p) => ({
@@ -617,7 +671,7 @@ export function StepperRegistrationForm({
         planId: selectedPlan.id,
         additionalPlanIds: selectedAdditionalPlanIds,
         registrationFee,
-        totalAmount: total,
+        totalAmount: frequencyAdjustedTotal,
         signatureDataUrl,
         paymentFrequency,
         registrationDetails: {
@@ -658,7 +712,7 @@ export function StepperRegistrationForm({
           registrationFee,
           discountAmount,
           discountLabel,
-          total,
+          total: frequencyAdjustedTotal,
           startDate: membershipStartDate,
           endDate: membershipEndDate,
           paymentFrequency,
@@ -998,7 +1052,8 @@ export function StepperRegistrationForm({
               registrationFee={registrationFee}
               discountAmount={discountAmount}
               discountLabel={discountLabel}
-              total={total}
+              total={frequencyAdjustedTotal}
+              upfrontTotal={total}
               paymentFrequency={paymentFrequency}
               totalPlanMonths={totalPlanMonths}
             />
@@ -1008,34 +1063,41 @@ export function StepperRegistrationForm({
                 Payment Frequency
               </p>
               <div className="flex flex-col gap-1.5">
-                {(
-                  [
-                    {
-                      value: "MONTHLY",
-                      label: "Monthly",
-                      unit: "/mo",
-                      minMonths: 1,
-                    },
-                    {
-                      value: "QUARTERLY",
-                      label: "Quarterly",
-                      unit: "/qtr",
-                      minMonths: 3,
-                    },
-                    {
-                      value: "YEARLY",
-                      label: "Yearly",
-                      unit: "/yr",
-                      minMonths: 12,
-                    },
-                  ] as const
-                )
+                {[
+                  {
+                    value: "UPFRONT" as const,
+                    label: "Upfront",
+                    unit: "" as const,
+                    minMonths: 1,
+                  },
+                  {
+                    value: "MONTHLY" as const,
+                    label: "Monthly",
+                    unit: "/mo" as const,
+                    minMonths: 1,
+                  },
+                  {
+                    value: "QUARTERLY" as const,
+                    label: "Quarterly",
+                    unit: "/qtr" as const,
+                    minMonths: 3,
+                  },
+                  {
+                    value: "YEARLY" as const,
+                    label: "Yearly",
+                    unit: "/yr" as const,
+                    minMonths: 12,
+                  },
+                ]
                   .filter(
                     ({ minMonths }) =>
                       totalPlanMonths === 0 || totalPlanMonths >= minMonths,
                   )
                   .map(({ value, label, unit }) => {
-                    const periodAmt = calcPerPeriod(value);
+                    const periodAmt =
+                      value === "UPFRONT" ? total : calcPerPeriod(value);
+                    const displayAmt = value === "UPFRONT" ? total : periodAmt;
+                    const displayUnit = value === "UPFRONT" ? "" : unit;
                     return (
                       <label
                         key={value}
@@ -1069,10 +1131,12 @@ export function StepperRegistrationForm({
                         </span>
                         {periodAmt !== null && (
                           <span className="text-xs font-semibold text-white/80">
-                            {money(currency, periodAmt)}
-                            <span className="text-white/40 font-normal ml-0.5">
-                              {unit}
-                            </span>
+                            {money(currency, displayAmt!)}
+                            {displayUnit && (
+                              <span className="text-white/40 font-normal ml-0.5">
+                                {displayUnit}
+                              </span>
+                            )}
                           </span>
                         )}
                       </label>
@@ -1157,7 +1221,8 @@ export function StepperRegistrationForm({
               registrationFee={registrationFee}
               discountAmount={discountAmount}
               discountLabel={discountLabel}
-              total={total}
+              total={frequencyAdjustedTotal}
+              upfrontTotal={total}
               paymentFrequency={paymentFrequency}
               totalPlanMonths={totalPlanMonths}
             />
@@ -1393,7 +1458,8 @@ export function StepperRegistrationForm({
               registrationFee={registrationFee}
               discountAmount={discountAmount}
               discountLabel={discountLabel}
-              total={total}
+              total={frequencyAdjustedTotal}
+              upfrontTotal={total}
               paymentFrequency={paymentFrequency}
               totalPlanMonths={totalPlanMonths}
             />
@@ -1499,6 +1565,7 @@ function TotalBox({
   discountAmount,
   discountLabel,
   total,
+  upfrontTotal,
   paymentFrequency,
   totalPlanMonths,
 }: {
@@ -1509,7 +1576,8 @@ function TotalBox({
   discountAmount: number;
   discountLabel: string;
   total: number;
-  paymentFrequency?: "MONTHLY" | "QUARTERLY" | "YEARLY";
+  upfrontTotal?: number;
+  paymentFrequency?: "MONTHLY" | "QUARTERLY" | "YEARLY" | "UPFRONT";
   totalPlanMonths?: number;
 }) {
   const membershipNet = Math.max(0, total - registrationFee);
@@ -1536,8 +1604,37 @@ function TotalBox({
       : paymentFrequency === "QUARTERLY"
         ? 3
         : 12;
-  const periodAmount =
-    monthlyRate !== null ? monthlyRate * freqMultiplier : null;
+  const periodAmount = (() => {
+    if (monthlyRate === null || !paymentFrequency || !plan) return null;
+    if (
+      paymentFrequency === "MONTHLY" &&
+      plan.monthlyPrice != null &&
+      plan.monthlyPrice > 0
+    )
+      return plan.monthlyPrice;
+    if (
+      paymentFrequency === "QUARTERLY" &&
+      plan.quarterlyPrice != null &&
+      plan.quarterlyPrice > 0
+    )
+      return plan.quarterlyPrice;
+    return monthlyRate * freqMultiplier;
+  })();
+
+  // Detect if frequency-adjusted total differs from upfront
+  const hasFrequencyPremium =
+    upfrontTotal !== undefined && Math.abs(total - upfrontTotal) > 0.001;
+
+  const freqPaymentsLabel = (() => {
+    if (!hasFrequencyPremium || !paymentFrequency || months === 0) return null;
+    if (paymentFrequency === "MONTHLY")
+      return `${months} monthly payment${months !== 1 ? "s" : ""}`;
+    if (paymentFrequency === "QUARTERLY") {
+      const q = Math.floor(months / 3);
+      return `${q} quarterly payment${q !== 1 ? "s" : ""}`;
+    }
+    return null;
+  })();
 
   return (
     <div className="rounded-lg border border-white/10 bg-[#120817] p-4">
@@ -1564,10 +1661,33 @@ function TotalBox({
           <span>- {money(currency, discountAmount)}</span>
         </div>
       )}
-      <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3 text-base font-bold">
-        <span>Total (full duration)</span>
-        <span>{money(currency, total)}</span>
-      </div>
+
+      {hasFrequencyPremium && upfrontTotal !== undefined ? (
+        /* Frequency-adjusted pricing: show upfront (muted) + frequency total (highlighted) */
+        <div className="mt-3 border-t border-white/10 pt-3 space-y-1.5">
+          <div className="flex items-center justify-between gap-4 text-sm text-white/30 line-through">
+            <span>Upfront total</span>
+            <span>{money(currency, upfrontTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 text-base font-bold text-red-400">
+            <span>
+              Total
+              {freqPaymentsLabel && (
+                <span className="text-xs font-normal text-red-400/70 ml-1">
+                  ({freqPaymentsLabel})
+                </span>
+              )}
+            </span>
+            <span>{money(currency, total)}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3 text-base font-bold">
+          <span>Total (full duration)</span>
+          <span>{money(currency, total)}</span>
+        </div>
+      )}
+
       {months > 0 && plan && (
         <div className="mt-1 flex items-center justify-between gap-4 text-xs text-white/35">
           <span>Duration</span>

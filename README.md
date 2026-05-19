@@ -249,6 +249,107 @@ The frontend will run on **http://localhost:3000**.
 
 ---
 
+## Pricing & Payment Calculation Logic
+
+### Plan Price Fields
+
+Each `MembershipPlan` has three price fields:
+
+| Field            | Type   | Purpose                                                    |
+| ---------------- | ------ | ---------------------------------------------------------- |
+| `price`          | Float  | Base upfront price for the plan (always required)          |
+| `monthlyPrice`   | Float? | Per-month charge when member selects Monthly frequency     |
+| `quarterlyPrice` | Float? | Per-quarter charge when member selects Quarterly frequency |
+
+> If `monthlyPrice` / `quarterlyPrice` are `null` or `0`, the frequency total falls back to the base upfront `price`.
+
+---
+
+### Payment Frequencies
+
+A member can choose one of four payment frequencies during registration:
+
+| Frequency | Value       | Description                                     |
+| --------- | ----------- | ----------------------------------------------- |
+| Upfront   | `UPFRONT`   | Pay the full amount once at the time of joining |
+| Monthly   | `MONTHLY`   | Pay a fixed amount every month                  |
+| Quarterly | `QUARTERLY` | Pay a fixed amount every 3 months               |
+| Yearly    | `YEARLY`    | Yearly billing (uses base `price` field)        |
+
+---
+
+### Total Amount Formula
+
+```
+Total = Plan Charge + Add-on Total + Registration Fee − Discount
+```
+
+Where **Plan Charge** depends on the selected frequency:
+
+| Frequency   | Plan Charge Calculation                                        |
+| ----------- | -------------------------------------------------------------- |
+| `UPFRONT`   | `plan.price`                                                   |
+| `MONTHLY`   | `plan.monthlyPrice × totalPlanMonths` (if monthlyPrice is set) |
+| `QUARTERLY` | `plan.quarterlyPrice × floor(totalPlanMonths / 3)` (if set)    |
+| `YEARLY`    | `plan.price` (upfront price used as-is)                        |
+
+**Full formula:**
+
+```
+UPFRONT:
+  total = plan.price + additionalTotal + registrationFee − discountAmount
+
+MONTHLY (when monthlyPrice is set):
+  total = (plan.monthlyPrice × totalPlanMonths) + additionalTotal + registrationFee − discountAmount
+
+QUARTERLY (when quarterlyPrice is set):
+  quarters = floor(totalPlanMonths / 3)
+  total = (plan.quarterlyPrice × quarters) + additionalTotal + registrationFee − discountAmount
+
+YEARLY / fallback:
+  total = plan.price + additionalTotal + registrationFee − discountAmount
+```
+
+> The result is always clamped to `≥ 0`.
+
+---
+
+### Per-Period Amount (shown in contract / email)
+
+This is the installment amount shown on the signed contract and in the confirmation email.
+
+| Frequency   | Per-period amount                                                   |
+| ----------- | ------------------------------------------------------------------- |
+| `UPFRONT`   | `null` — no periodic payments, shown as lump sum                    |
+| `MONTHLY`   | `plan.monthlyPrice` (if set), else `plan.price / totalPlanMonths`   |
+| `QUARTERLY` | `plan.quarterlyPrice` (if set), else `plan.price / floor(months/3)` |
+| `YEARLY`    | `plan.price / ceil(months/12)`                                      |
+
+---
+
+### Example
+
+**Plan:** 6-Month Gym Membership  
+`price = CHF 388`, `monthlyPrice = CHF 70`, `quarterlyPrice = CHF 200`  
+Add-ons: CHF 0 | Registration fee: CHF 30 | Discount: CHF 0
+
+| Frequency | Calculation                        | Total   | Per-period   |
+| --------- | ---------------------------------- | ------- | ------------ |
+| Upfront   | 388 + 30                           | CHF 418 | —            |
+| Monthly   | (70 × 6) + 30 = 420 + 30           | CHF 450 | CHF 70 /mo   |
+| Quarterly | (200 × 2) + 30 = 400 + 30          | CHF 430 | CHF 200 /qtr |
+| Yearly    | 388 + 30 (< 12 months, uses price) | CHF 418 | CHF 418 /yr  |
+
+---
+
+### Auto-reset Rules
+
+- If a plan duration is **less than 3 months**, Quarterly is not available — the frequency is auto-reset to **Upfront**.
+- Prices are validated server-side: `monthlyPrice` and `quarterlyPrice` cannot be negative (`Math.max(0, value)`).
+- If `monthlyPrice` / `quarterlyPrice` is saved as `0` in the admin panel, it is stored as `null` (treated as "not set").
+
+---
+
 ## Running Both Servers Concurrently
 
 Open two terminal windows:

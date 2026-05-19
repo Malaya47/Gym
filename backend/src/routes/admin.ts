@@ -1224,6 +1224,8 @@ function serializePlan(p: {
   name: string;
   duration: string;
   price: number;
+  monthlyPrice: number | null;
+  quarterlyPrice: number | null;
   currency: string;
   features: string[];
   category: string;
@@ -1254,13 +1256,30 @@ router.post(
   requireAdmin,
   async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { name, duration, price, currency, features, category, isActive } =
-        req.body;
+      const {
+        name,
+        duration,
+        price,
+        monthlyPrice,
+        quarterlyPrice,
+        currency,
+        features,
+        category,
+        isActive,
+      } = req.body;
       const row = await prisma.membershipPlan.create({
         data: {
           name: name || "New Plan",
           duration: duration || "1 Month",
-          price: Number(price) || 0,
+          price: Math.max(0, Number(price) || 0),
+          monthlyPrice:
+            monthlyPrice != null && Number(monthlyPrice) > 0
+              ? Number(monthlyPrice)
+              : null,
+          quarterlyPrice:
+            quarterlyPrice != null && Number(quarterlyPrice) > 0
+              ? Number(quarterlyPrice)
+              : null,
           currency: currency || "CHF",
           features: parseFeatures(features),
           category: (category || "MEMBERSHIP") as any,
@@ -1279,12 +1298,31 @@ router.put(
   requireAdmin,
   async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { features, price, isActive, ...rest } = req.body;
+      const {
+        features,
+        price,
+        monthlyPrice,
+        quarterlyPrice,
+        isActive,
+        ...rest
+      } = req.body;
       const row = await prisma.membershipPlan.update({
         where: { id: Number(req.params.id) },
         data: {
           ...rest,
-          ...(price !== undefined ? { price: Number(price) } : {}),
+          ...(price !== undefined ? { price: Math.max(0, Number(price)) } : {}),
+          ...(monthlyPrice !== undefined
+            ? {
+                monthlyPrice:
+                  Number(monthlyPrice) > 0 ? Number(monthlyPrice) : null,
+              }
+            : {}),
+          ...(quarterlyPrice !== undefined
+            ? {
+                quarterlyPrice:
+                  Number(quarterlyPrice) > 0 ? Number(quarterlyPrice) : null,
+              }
+            : {}),
           ...(features !== undefined
             ? { features: parseFeatures(features) }
             : {}),

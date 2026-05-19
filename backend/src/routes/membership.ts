@@ -228,9 +228,11 @@ router.post(
             typeof signatureDataUrl === "string" ? signatureDataUrl : null,
           paymentFrequency:
             typeof paymentFrequency === "string" &&
-            ["MONTHLY", "QUARTERLY", "YEARLY"].includes(paymentFrequency)
+            ["MONTHLY", "QUARTERLY", "YEARLY", "UPFRONT"].includes(
+              paymentFrequency,
+            )
               ? paymentFrequency
-              : "MONTHLY",
+              : "UPFRONT",
           registrationDetails: details as Prisma.InputJsonValue,
           notes: [
             `Registration fee: ${plan.currency} ${
@@ -457,9 +459,13 @@ router.post(
             ? "Quarterly"
             : paymentFrequency === "YEARLY"
               ? "Yearly"
-              : String(paymentFrequency);
+              : paymentFrequency === "UPFRONT"
+                ? "Upfront (full payment)"
+                : String(paymentFrequency);
       const periodicLine =
-        periodicAmount != null && Number(periodicAmount) > 0
+        paymentFrequency !== "UPFRONT" &&
+        periodicAmount != null &&
+        Number(periodicAmount) > 0
           ? `\nPayment Frequency: ${freqLabel} (${currency} ${Number(periodicAmount).toLocaleString(undefined, { maximumFractionDigits: 2 })} per period)`
           : `\nPayment Frequency: ${freqLabel}`;
       const bodyText =
